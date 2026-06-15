@@ -103,8 +103,10 @@ def fetch_url(url):
             f"http://api.scraperapi.com"
             f"?api_key={SCRAPER_API_KEY}"
             f"&url={requests.utils.quote(url, safe='')}"
+            f"&render=true"
+            f"&country_code=us"
         )
-        return requests.get(proxy_url, timeout=60)
+        return requests.get(proxy_url, timeout=120)
     else:
         return requests.get(url, headers=HEADERS, timeout=30)
 

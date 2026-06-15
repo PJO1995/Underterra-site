@@ -27,6 +27,7 @@ jobs:
       - name: Run inventory scraper
         env:
           SCRAPER_API_KEY: ${{ secrets.SCRAPER_API_KEY }}
+        timeout-minutes: 5
         run: python3 scraper/scraper.py
 
       - name: Commit and push if changed
