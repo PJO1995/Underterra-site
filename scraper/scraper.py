@@ -97,18 +97,8 @@ def sandhills_img_url(listing_id, index=0):
 # ── Scraper ──────────────────────────────────────────────────────────────────────
 
 def fetch_url(url):
-    """Fetch a URL, routing through ScraperAPI proxy if key is configured."""
-    if SCRAPER_API_KEY:
-        proxy_url = (
-            f"http://api.scraperapi.com"
-            f"?api_key={SCRAPER_API_KEY}"
-            f"&url={requests.utils.quote(url, safe='')}"
-            f"&render=true"
-            f"&country_code=us"
-        )
-        return requests.get(proxy_url, timeout=120)
-    else:
-        return requests.get(url, headers=HEADERS, timeout=30)
+    """Fetch a URL directly (works from a regular IP; cloud IPs may be blocked)."""
+    return requests.get(url, headers=HEADERS, timeout=30)
 
 
 def scrape_all_listings():
