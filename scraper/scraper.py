@@ -9,8 +9,8 @@ import os
 import re
 import sys
 import time
-import requests
 from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 DEALER_PAGES = [
@@ -24,15 +24,7 @@ SCRAPER_API_KEY = os.environ.get("SCRAPER_API_KEY", "")
 
 INDEX_FILE = "index.html"
 
-HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-}
+PW_BROWSER = None  # initialized lazily
 
 # ── Helpers ─────────────────────────────────────────────────────────────────────
 
@@ -96,9 +88,32 @@ def sandhills_img_url(listing_id, index=0):
 
 # ── Scraper ──────────────────────────────────────────────────────────────────────
 
-def fetch_url(url):
-    """Fetch a URL directly (works from a regular IP; cloud IPs may be blocked)."""
-    return requests.get(url, headers=HEADERS, timeout=30)
+_PW_CONTEXT = None
+
+def fetch_html(url):
+    """Fetch page HTML using real Chrome browser to bypass bot protection."""
+    with sync_playwright() as p:
+        # Use non-headless mode on Mac so the browser passes bot checks
+        browser = p.chromium.launch(
+            headless=False,
+            args=["--disable-blink-features=AutomationControlled"],
+        )
+        ctx = browser.new_context(
+            user_agent=(
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+            viewport={"width": 1280, "height": 800},
+        )
+        page = ctx.new_page()
+        # Remove webdriver flag that bot detectors use
+        page.add_init_script("Object.defineProperty(navigator,'webdriver',{get:()=>undefined})")
+        page.goto(url, wait_until="load", timeout=30000)
+        page.wait_for_timeout(4000)  # let JS finish rendering
+        html = page.content()
+        browser.close()
+        return html
 
 
 def scrape_all_listings():
@@ -106,13 +121,12 @@ def scrape_all_listings():
     listings = []
     for url in DEALER_PAGES:
         try:
-            resp = fetch_url(url)
-            resp.raise_for_status()
+            html = fetch_html(url)
         except Exception as e:
             print(f"  ⚠ Could not fetch {url}: {e}")
             continue
 
-        soup = BeautifulSoup(resp.text, "html.parser")
+        soup = BeautifulSoup(html, "html.parser")
 
         # Each listing is anchored by an <h2> containing a link to /listing/for-sale/
         for h2 in soup.find_all("h2"):
