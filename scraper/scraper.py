@@ -9,14 +9,12 @@ import os
 import re
 import sys
 import time
+import urllib.request
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 # ── Config ─────────────────────────────────────────────────────────────────────
-DEALER_PAGES = [
-    "https://www.machinerytrader.com/listings/for-sale/underterra/construction-equipment/?DSCompanyID=101734",
-    "https://www.machinerytrader.com/listings/for-sale/underterra/construction-equipment/?DSCompanyID=101734&pg=2",
-]
+DEALER_BASE_URL = "https://www.machinerytrader.com/listings/search?DSCompanyID=101734"
 
 # ScraperAPI key (set as GitHub secret SCRAPER_API_KEY)
 # Sign up free at https://www.scraperapi.com  — free tier: 1,000 requests/month
@@ -79,21 +77,26 @@ def listing_id_from_url(url):
     return m.group(1) if m else ""
 
 
-def sandhills_img_url(listing_id, index=0):
-    """Build a Sandhills CDN image URL for a given listing."""
-    return (
-        f"https://media.sandhills.com/img.axd"
-        f"?id={listing_id}&wid=&w=640&h=480&t=&lp={index}&c=True&wt=False&sz=Max&rt=0"
-    )
+def fetch_og_image(listing_url):
+    """Fetch the og:image URL from an MT listing detail page using real browser."""
+    try:
+        html = fetch_page_html(listing_url)
+        m = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', html)
+        if not m:
+            m = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', html)
+        if m:
+            return m.group(1).replace("&amp;", "&")
+    except Exception as e:
+        print(f"  ⚠ Could not fetch og:image for {listing_url}: {e}")
+    return None
 
 # ── Scraper ──────────────────────────────────────────────────────────────────────
 
 _PW_CONTEXT = None
 
-def fetch_html(url):
-    """Fetch page HTML using real Chrome browser to bypass bot protection."""
+def fetch_page_html(url):
+    """Fetch a single page using real Chrome to bypass bot protection."""
     with sync_playwright() as p:
-        # Use non-headless mode on Mac so the browser passes bot checks
         browser = p.chromium.launch(
             headless=False,
             args=["--disable-blink-features=AutomationControlled"],
@@ -104,31 +107,78 @@ def fetch_html(url):
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                 "Chrome/120.0.0.0 Safari/537.36"
             ),
-            viewport={"width": 1280, "height": 800},
+            viewport={"width": 1280, "height": 900},
         )
         page = ctx.new_page()
-        # Remove webdriver flag that bot detectors use
         page.add_init_script("Object.defineProperty(navigator,'webdriver',{get:()=>undefined})")
         page.goto(url, wait_until="load", timeout=30000)
-        page.wait_for_timeout(4000)  # let JS finish rendering
+        page.wait_for_timeout(4000)
         html = page.content()
         browser.close()
         return html
 
 
-def scrape_all_listings():
-    """Return list of dicts with all current MT listings."""
-    listings = []
-    for url in DEALER_PAGES:
-        try:
-            html = fetch_html(url)
-        except Exception as e:
-            print(f"  ⚠ Could not fetch {url}: {e}")
-            continue
+def scrape_all_pages():
+    """Fetch all pages of the MT dealer listing."""
+    all_html_pages = []
+    page_num = 1
 
+    while page_num <= 10:  # safety cap
+        if page_num == 1:
+            url = DEALER_BASE_URL
+        else:
+            url = f"{DEALER_BASE_URL}&page={page_num}"
+
+        print(f"  [PAGE] Fetching page {page_num}: {url}")
+        try:
+            html = fetch_page_html(url)
+        except Exception as e:
+            print(f"  ⚠ Could not fetch page {page_num}: {e}")
+            break
+
+        # Check if this page has any listing links at all
+        if "/listing/for-sale/" not in html:
+            print(f"  [PAGE] Page {page_num} has no listings — stopping.")
+            break
+
+        # Count how many unique listing IDs this page has
+        page_ids = set(re.findall(r'/listing/for-sale/(\d+)/', html))
+        if not page_ids:
+            print(f"  [PAGE] Page {page_num} returned no listing IDs — stopping.")
+            break
+
+        all_html_pages.append((page_num, html))
+        print(f"  [PAGE] Page {page_num} loaded OK ({len(page_ids)} listing IDs found)")
+
+        # Always try next page — stop only when it returns no new IDs
+        page_num += 1
+        time.sleep(1)
+
+    return all_html_pages
+
+
+def scrape_all_listings():
+    """Return list of dicts with all current MT listings across all pages."""
+    listings = []
+    seen_lids = set()
+
+    try:
+        html_pages = scrape_all_pages()
+    except Exception as e:
+        print(f"  ⚠ Scraping failed: {e}")
+        return listings
+
+    for page_num, html in html_pages:
         soup = BeautifulSoup(html, "html.parser")
 
+        # DEBUG: check key IDs
+        if "256966183" in html:
+            print(f"  [DEBUG] Page {page_num}: ID 256966183 (JD 310SL) IS present ✓")
+        else:
+            print(f"  [DEBUG] Page {page_num}: ID 256966183 (JD 310SL) NOT present")
+
         # Each listing is anchored by an <h2> containing a link to /listing/for-sale/
+        page_count = 0
         for h2 in soup.find_all("h2"):
             a = h2.find("a", href=re.compile(r"/listing/for-sale/"))
             if not a:
@@ -174,6 +224,12 @@ def scrape_all_listings():
             # Machine name = title minus year prefix
             name = re.sub(r'^\d{4}\s+', '', title).strip()
 
+            # Skip duplicates (same listing may appear on multiple pages during transition)
+            if lid and lid in seen_lids:
+                continue
+            if lid:
+                seen_lids.add(lid)
+
             listings.append({
                 "title":    title,
                 "name":     name,
@@ -186,8 +242,9 @@ def scrape_all_listings():
                 "type":     get_machine_type(title, category_raw),
                 "brand":    get_brand(title),
             })
+            page_count += 1
 
-        time.sleep(1)  # polite delay between pages
+        print(f"  [DEBUG] Page {page_num}: parsed {page_count} unique listings")
 
     return listings
 
@@ -205,7 +262,7 @@ MT_BTN_SVG = (
 
 
 def build_machine_card(listing, machine_id, stock_num):
-    """Generate the HTML for a new machine card using Sandhills CDN images."""
+    """Generate the HTML for a new machine card using the real og:image from MT."""
     lid = listing["lid"]
     mt_url = listing["url"]
     brand = listing["brand"]
@@ -217,15 +274,17 @@ def build_machine_card(listing, machine_id, stock_num):
     hours = listing["hours"]
     title_full = listing["title"]
 
-    # Build image tags (fetch up to 8 images from Sandhills CDN)
-    imgs = []
-    for i in range(8):
-        img_url = sandhills_img_url(lid, i)
-        css_class = "carousel-img active" if i == 0 else "carousel-img"
-        imgs.append(f'      <img src="{img_url}" class="{css_class}" alt="" loading="lazy" onerror="this.style.display=\'none\'">')
+    # Fetch real image URL from MT listing detail page
+    print(f"  [IMG] Fetching image for {title_full}...")
+    og_img = fetch_og_image(mt_url)
 
-    imgs_html = "\n".join(imgs)
-    img_count = len(imgs)
+    if og_img:
+        imgs_html = f'      <img src="{og_img}" class="carousel-img active" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+        img_count = 1
+    else:
+        # Fallback: no image
+        imgs_html = ''
+        img_count = 0
 
     # Specs
     specs_parts = []
@@ -296,23 +355,16 @@ def update_index(listings):
         next_id_num += 1
         next_stock_num += 1
 
-    # Insert before closing </div> of catalog-grid
-    catalog_close = '</div>\n\n  </section>'
-    if catalog_close not in html:
-        # fallback: find the grid closing tag
-        catalog_close = '  </div>\n\n  </section>'
+    # Insert cards before the catalog-grid closing div.
+    # The grid closes with:  </div>\n\n  <div class="view-all-wrap">
+    # We must NOT match the view-all-wrap's closing div (which comes just before </section>).
+    GRID_CLOSE = '  </div>\n\n  <div class="view-all-wrap">'
+    if GRID_CLOSE not in html:
+        print("  ⚠ Could not locate catalog-grid closing marker. Aborting.")
+        return False
 
-    # Try a different approach: insert before the last </div> that closes catalog-grid
-    # Find the catalog-grid div and insert before its closing tag
-    grid_pattern = re.compile(
-        r'(<div class="catalog-grid" id="catalog-grid">)(.*?)(</div>\s*\n\s*</section>)',
-        re.DOTALL
-    )
-
-    def replacer(m):
-        return m.group(1) + m.group(2) + new_cards_html + "\n\n  " + m.group(3)
-
-    new_html, count = grid_pattern.subn(replacer, html, count=1)
+    new_html = html.replace(GRID_CLOSE, new_cards_html + "\n\n" + GRID_CLOSE, 1)
+    count = 1
 
     if count == 0:
         print("  ⚠ Could not locate catalog-grid in HTML. Aborting.")
