@@ -1305,7 +1305,7 @@
     <div>
       <span class="section-tag">Available Inventory — Del Rio, Texas</span>
       <h2 class="section-title">OUR EQUIPMENT</h2>
-      <p class="catalog-count">Showing 28 of 46 active listings &nbsp;·&nbsp; CAT · CASE · Bobcat</p>
+      <p class="catalog-count" id="catalog-count-text">Showing 47 of 47 active listings &nbsp;·&nbsp; CAT · CASE · Bobcat</p>
     </div>
     <div class="filter-tabs">
       <button class="filter-btn active" onclick="filterCatalog('all', this)">All</button>
@@ -4745,17 +4745,25 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
 
 
   <script>
-  /* ── Hide sold machines from public catalog ── */
+  /* ── Hide sold machines from public catalog + update count ── */
   (function(){
     try {
+      var total = document.querySelectorAll('.machine-card').length;
+      var sold = 0;
       var data = JSON.parse(localStorage.getItem('underterra_admin_v1'));
-      if (!data || !data.inventory) return;
-      data.inventory.forEach(function(m){
-        if (m.status === 'sold') {
-          var card = document.querySelector('[data-machine-id="' + m.id + '"]');
-          if (card) card.style.display = 'none';
-        }
-      });
+      if (data && data.inventory) {
+        data.inventory.forEach(function(m){
+          if (m.status === 'sold') {
+            var card = document.querySelector('[data-machine-id="' + m.id + '"]');
+            if (card) { card.style.display = 'none'; sold++; }
+          }
+        });
+      }
+      var available = total - sold;
+      var el = document.getElementById('catalog-count-text');
+      if (el) {
+        el.innerHTML = 'Showing ' + available + ' of ' + available + ' active listings &nbsp;&middot;&nbsp; CAT &middot; CASE &middot; Bobcat';
+      }
     } catch(e){}
   })();
   </script>
