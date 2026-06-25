@@ -70,17 +70,79 @@ def listing_id_from_url(url):
     return m.group(1) if m else ""
 
 
-def fetch_og_image(listing_url):
-    """Fetch the og:image URL from an MT listing detail page using real browser."""
+def fetch_all_images(listing_url):
+    """Fetch all gallery image URLs from an MT listing detail page.
+    Opens a real Chrome browser, harvests CDN image URLs from initial load,
+    then clicks the carousel Next button to trigger any lazy-loaded images.
+    Returns a list of unique image URLs (deduplicated by id= param), or None.
+    """
     try:
-        html = fetch_page_html(listing_url)
-        m = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', html)
-        if not m:
-            m = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', html)
-        if m:
-            return m.group(1).replace("&amp;", "&")
+        with sync_playwright() as p:
+            browser = p.chromium.launch(
+                headless=False,
+                args=["--disable-blink-features=AutomationControlled"],
+            )
+            ctx = browser.new_context(
+                user_agent=(
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/120.0.0.0 Safari/537.36"
+                ),
+                viewport={"width": 1280, "height": 900},
+            )
+            page = ctx.new_page()
+            page.add_init_script("Object.defineProperty(navigator,'webdriver',{get:()=>undefined})")
+            page.goto(listing_url, wait_until="load", timeout=30000)
+            page.wait_for_timeout(4000)
+
+            seen_ids = set()
+            images = []
+
+            def harvest(html_text):
+                """Extract unique Sandhills/MT CDN image URLs from HTML."""
+                for m in re.finditer(
+                    r'(https://[^\s"\'<>]*machinerytrader\.com[^\s"\'<>]*[?&]id=(\d+)[^\s"\'<>]*)',
+                    html_text,
+                ):
+                    url = m.group(1).replace("&amp;", "&")
+                    img_id = m.group(2)
+                    if img_id not in seen_ids:
+                        seen_ids.add(img_id)
+                        images.append(url)
+
+            # Harvest images from initial page load
+            harvest(page.content())
+
+            # Click carousel Next to trigger lazy-loaded images (up to 30 photos)
+            for _ in range(30):
+                clicked = False
+                for sel in [
+                    'button[aria-label*="Next" i]',
+                    'button[aria-label*="next" i]',
+                    '.slick-next',
+                    '[class*="next-photo"]',
+                    '[class*="nextPhoto"]',
+                    '[class*="photo-next"]',
+                    '[class*="PhotoNext"]',
+                ]:
+                    try:
+                        btn = page.query_selector(sel)
+                        if btn and btn.is_visible():
+                            btn.click()
+                            page.wait_for_timeout(600)
+                            harvest(page.content())
+                            clicked = True
+                            break
+                    except Exception:
+                        pass
+                if not clicked:
+                    break
+
+            browser.close()
+            return images if images else None
+
     except Exception as e:
-        print(f"  ⚠ Could not fetch og:image for {listing_url}: {e}")
+        print(f"  ⚠ Could not fetch images for {listing_url}: {e}")
     return None
 
 # ── Scraper ──────────────────────────────────────────────────────────────────────
@@ -257,15 +319,19 @@ def build_machine_card(listing, machine_id, stock_num):
     hours = listing["hours"]
     title_full = listing["title"]
 
-    # Fetch real image URL from MT listing detail page
-    print(f"  Fetching image for {title_full}...")
-    og_img = fetch_og_image(mt_url)
+    # Fetch all gallery images from MT listing detail page
+    print(f"  Fetching images for {title_full}...")
+    img_list = fetch_all_images(mt_url)
 
-    if og_img:
-        imgs_html = f'      <img src="{og_img}" class="carousel-img active" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
-        img_count = 1
+    if img_list:
+        imgs_html = "\n".join(
+            f'      <img src="{u}" class="carousel-img{" active" if i == 0 else ""}" '
+            f'alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+            for i, u in enumerate(img_list)
+        )
+        img_count = len(img_list)
+        print(f"    → {img_count} photo(s) found")
     else:
-        # Fallback: no image
         imgs_html = ''
         img_count = 0
 
