@@ -9,20 +9,13 @@ import os
 import re
 import sys
 import time
-import urllib.request
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 DEALER_BASE_URL = "https://www.machinerytrader.com/listings/search?DSCompanyID=101734"
 
-# ScraperAPI key (set as GitHub secret SCRAPER_API_KEY)
-# Sign up free at https://www.scraperapi.com  — free tier: 1,000 requests/month
-SCRAPER_API_KEY = os.environ.get("SCRAPER_API_KEY", "")
-
 INDEX_FILE = "index.html"
-
-PW_BROWSER = None  # initialized lazily
 
 # ── Helpers ─────────────────────────────────────────────────────────────────────
 
@@ -92,8 +85,6 @@ def fetch_og_image(listing_url):
 
 # ── Scraper ──────────────────────────────────────────────────────────────────────
 
-_PW_CONTEXT = None
-
 def fetch_page_html(url):
     """Fetch a single page using real Chrome to bypass bot protection."""
     with sync_playwright() as p:
@@ -129,26 +120,24 @@ def scrape_all_pages():
         else:
             url = f"{DEALER_BASE_URL}&page={page_num}"
 
-        print(f"  [PAGE] Fetching page {page_num}: {url}")
+        print(f"  Fetching page {page_num}...")
         try:
             html = fetch_page_html(url)
         except Exception as e:
             print(f"  ⚠ Could not fetch page {page_num}: {e}")
             break
 
-        # Check if this page has any listing links at all
         if "/listing/for-sale/" not in html:
-            print(f"  [PAGE] Page {page_num} has no listings — stopping.")
+            print(f"  Page {page_num} has no listings — stopping.")
             break
 
-        # Count how many unique listing IDs this page has
         page_ids = set(re.findall(r'/listing/for-sale/(\d+)/', html))
         if not page_ids:
-            print(f"  [PAGE] Page {page_num} returned no listing IDs — stopping.")
+            print(f"  Page {page_num} returned no listing IDs — stopping.")
             break
 
         all_html_pages.append((page_num, html))
-        print(f"  [PAGE] Page {page_num} loaded OK ({len(page_ids)} listing IDs found)")
+        print(f"  Page {page_num}: {len(page_ids)} listings found")
 
         # Always try next page — stop only when it returns no new IDs
         page_num += 1
@@ -170,12 +159,6 @@ def scrape_all_listings():
 
     for page_num, html in html_pages:
         soup = BeautifulSoup(html, "html.parser")
-
-        # DEBUG: check key IDs
-        if "256966183" in html:
-            print(f"  [DEBUG] Page {page_num}: ID 256966183 (JD 310SL) IS present ✓")
-        else:
-            print(f"  [DEBUG] Page {page_num}: ID 256966183 (JD 310SL) NOT present")
 
         # Each listing is anchored by an <h2> containing a link to /listing/for-sale/
         page_count = 0
@@ -244,7 +227,7 @@ def scrape_all_listings():
             })
             page_count += 1
 
-        print(f"  [DEBUG] Page {page_num}: parsed {page_count} unique listings")
+        print(f"  Page {page_num}: parsed {page_count} unique listings")
 
     return listings
 
@@ -275,7 +258,7 @@ def build_machine_card(listing, machine_id, stock_num):
     title_full = listing["title"]
 
     # Fetch real image URL from MT listing detail page
-    print(f"  [IMG] Fetching image for {title_full}...")
+    print(f"  Fetching image for {title_full}...")
     og_img = fetch_og_image(mt_url)
 
     if og_img:
@@ -364,11 +347,6 @@ def update_index(listings):
         return False
 
     new_html = html.replace(GRID_CLOSE, new_cards_html + "\n\n" + GRID_CLOSE, 1)
-    count = 1
-
-    if count == 0:
-        print("  ⚠ Could not locate catalog-grid in HTML. Aborting.")
-        return False
 
     # Update catalog count text
     total = len(existing_ids) + len(new_listings)
