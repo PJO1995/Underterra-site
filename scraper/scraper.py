@@ -100,8 +100,9 @@ def fetch_all_images(listing_url):
 
             def harvest(html_text):
                 """Extract unique Sandhills/MT CDN image URLs from HTML."""
+                # Match machinerytrader.com or sandhills.com CDN URLs with id= param
                 for m in re.finditer(
-                    r'(https://[^\s"\'<>]*machinerytrader\.com[^\s"\'<>]*[?&]id=(\d+)[^\s"\'<>]*)',
+                    r'(https://[^\s"\'<>]*(?:machinerytrader|sandhills|machinery)[^\s"\'<>]*[?&]id=(\d+)[^\s"\'<>]*)',
                     html_text,
                 ):
                     url = m.group(1).replace("&amp;", "&")
@@ -109,6 +110,18 @@ def fetch_all_images(listing_url):
                     if img_id not in seen_ids:
                         seen_ids.add(img_id)
                         images.append(url)
+                # Also match data-src lazy-loaded images
+                for m in re.finditer(
+                    r'data-src=["\']([^"\']*(?:machinerytrader|sandhills)[^"\']*)["\']',
+                    html_text,
+                ):
+                    url = m.group(1).replace("&amp;", "&")
+                    img_id_m = re.search(r'id=(\d+)', url)
+                    if img_id_m:
+                        img_id = img_id_m.group(1)
+                        if img_id not in seen_ids:
+                            seen_ids.add(img_id)
+                            images.append(url)
 
             # Harvest images from initial page load
             harvest(page.content())
