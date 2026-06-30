@@ -4188,6 +4188,19 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
           <span style="color:#444;font-size:0.78rem;">Resets all costs, statuses, notes to defaults — cannot be undone.</span>
         </div>
 
+        <div class="adm-section-title">GitHub Sync</div>
+        <p style="color:#666;font-size:0.82rem;margin:0 0 0.8rem;">
+          Cuando guardas un deal, se sincroniza automáticamente para que <strong style="color:#aaa;">todos los dispositivos</strong> (mobile, desktop) vean la máquina como vendida.<br>
+          <a href="https://github.com/settings/tokens/new?scopes=repo&description=Underterra+Sold+Sync" target="_blank" style="color:#ffd51e;text-decoration:none;">→ Crear token en GitHub</a>
+          &nbsp;(selecciona scope: <strong style="color:#aaa;">repo</strong>)
+        </p>
+        <div class="adm-changepw">
+          <input type="password" id="adm-gh-token" placeholder="ghp_xxxxxxxxxxxxxxxx" autocomplete="off">
+          <button class="adm-btn-sm" onclick="admSaveGhToken()">Save Token</button>
+          <span class="adm-msg" id="adm-gh-msg"></span>
+        </div>
+        <div id="adm-gh-status" style="font-size:0.78rem;margin-top:0.5rem;color:#555;"></div>
+
         <div class="adm-section-title">Quick Access</div>
         <div style="color:#555;font-size:0.82rem;line-height:2;">
           Open this panel anytime: <kbd class="adm-kbd">Ctrl+Shift+A</kbd>
@@ -4771,6 +4784,9 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
     m.dealNotes  =document.getElementById('adm-f-notes').value.trim();
     m.status     ='sold';   /* Auto-mark as sold when deal is registered */
     save(d);
+    /* Sync sold list to GitHub so ALL devices (mobile/desktop) see it */
+    var soldIds = d.inventory.filter(function(x){ return x.status==='sold'; }).map(function(x){ return x.id; });
+    syncSoldToGitHub(soldIds);
     admCloseDeal();
     /* Refresh whichever tab is visible */
     var invTab=document.getElementById('tab-inventory');
@@ -4779,6 +4795,56 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
     if(salesTab&&salesTab.style.display!=='none') renderSales();
     renderDashboard();
   };
+
+  /* ─── GitHub Token ─── */
+  var GH_REPO = 'PJO1995/Underterra-site';
+  var GH_FILE = 'sold.json';
+
+  window.admSaveGhToken = function(){
+    var token = document.getElementById('adm-gh-token').value.trim();
+    var msg = document.getElementById('adm-gh-msg');
+    if(!token){ msg.style.color='#e04040'; msg.textContent='Enter a token.'; return; }
+    localStorage.setItem('underterra_gh_token', token);
+    document.getElementById('adm-gh-token').value = '';
+    msg.style.color='#4ec994'; msg.textContent='✓ Token saved!';
+    document.getElementById('adm-gh-status').textContent = 'Token saved ✓ — auto-sync enabled.';
+    setTimeout(function(){ msg.textContent=''; }, 3500);
+  };
+
+  /* Called automatically after saving a deal — updates sold.json on GitHub */
+  function syncSoldToGitHub(soldIds){
+    var token = localStorage.getItem('underterra_gh_token');
+    var statusEl = document.getElementById('adm-gh-status');
+    if(!token){
+      if(statusEl) statusEl.innerHTML = '⚠ <span style="color:#e08040">No GitHub token — sold status only visible on this device. Set token in Settings.</span>';
+      return;
+    }
+    if(statusEl) statusEl.textContent = '⏳ Syncing sold list to GitHub...';
+    var apiUrl = 'https://api.github.com/repos/' + GH_REPO + '/contents/' + GH_FILE;
+    /* Step 1: get current file SHA */
+    fetch(apiUrl, { headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github.v3+json' }})
+      .then(function(r){ return r.json(); })
+      .then(function(fileData){
+        var sha = fileData.sha;
+        var newContent = btoa(JSON.stringify({sold: soldIds}) + '\n');
+        /* Step 2: push updated sold.json */
+        return fetch(apiUrl, {
+          method: 'PUT',
+          headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github.v3+json', 'Content-Type':'application/json' },
+          body: JSON.stringify({ message:'Update sold inventory', content: newContent, sha: sha })
+        });
+      })
+      .then(function(r){
+        if(r.ok){
+          if(statusEl) statusEl.innerHTML = '✅ <span style="color:#4ec994">Synced! Vercel deploying (~30s) — all devices will update automatically.</span>';
+        } else {
+          if(statusEl) statusEl.innerHTML = '❌ <span style="color:#e04040">GitHub sync failed. Check token in Settings.</span>';
+        }
+      })
+      .catch(function(){
+        if(statusEl) statusEl.innerHTML = '❌ <span style="color:#e04040">Network error. Check connection.</span>';
+      });
+  }
 
   /* ─── Change password ─── */
   window.admChangePw=function(){
@@ -4816,26 +4882,44 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
 
 
   <script>
-  /* ── Hide sold machines from public catalog + update count ── */
+  /* ── Hide sold machines — fetches sold.json (works on ALL devices) ── */
   (function(){
-    try {
+    function applySold(soldIds){
       var total = document.querySelectorAll('.machine-card').length;
       var sold = 0;
-      var data = JSON.parse(localStorage.getItem('underterra_admin_v1'));
-      if (data && data.inventory) {
-        data.inventory.forEach(function(m){
-          if (m.status === 'sold') {
-            var card = document.querySelector('[data-machine-id="' + m.id + '"]');
-            if (card) { card.style.display = 'none'; sold++; }
-          }
-        });
-      }
+      soldIds.forEach(function(id){
+        var card = document.querySelector('[data-machine-id="' + id + '"]');
+        if(card){ card.style.display = 'none'; sold++; }
+      });
       var available = total - sold;
       var el = document.getElementById('catalog-count-text');
-      if (el) {
-        el.innerHTML = 'Showing ' + available + ' of ' + available + ' active listings &nbsp;&middot;&nbsp; CAT &middot; CASE &middot; Bobcat';
-      }
-    } catch(e){}
+      if(el) el.innerHTML = 'Showing ' + available + ' of ' + available + ' active listings &nbsp;&middot;&nbsp; CAT &middot; CASE &middot; Bobcat';
+      /* Sync localStorage so admin panel stays consistent */
+      try{
+        var d = JSON.parse(localStorage.getItem('underterra_admin_v1'));
+        if(d && d.inventory){
+          d.inventory.forEach(function(m){
+            if(soldIds.indexOf(m.id) > -1) m.status = 'sold';
+          });
+          localStorage.setItem('underterra_admin_v1', JSON.stringify(d));
+        }
+      }catch(e){}
+    }
+
+    /* Fetch sold.json — the single source of truth for all visitors */
+    fetch('/sold.json?_=' + Date.now())
+      .then(function(r){ return r.json(); })
+      .then(function(data){ applySold(data.sold || []); })
+      .catch(function(){
+        /* Fallback: read from localStorage if fetch fails (e.g. offline) */
+        try{
+          var d = JSON.parse(localStorage.getItem('underterra_admin_v1'));
+          if(d && d.inventory){
+            var ids = d.inventory.filter(function(m){ return m.status === 'sold'; }).map(function(m){ return m.id; });
+            applySold(ids);
+          }
+        }catch(e){}
+      });
   })();
   </script>
 
