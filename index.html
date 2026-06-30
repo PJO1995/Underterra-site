@@ -3445,18 +3445,20 @@
       var brandOk = _activeBrand === 'all' || card.dataset.brand === _activeBrand;
       card.style.display = (typeOk && brandOk) ? '' : 'none';
     });
-    /* Re-hide sold machines after filter */
-    try {
-      var data = JSON.parse(localStorage.getItem('underterra_admin_v1'));
-      if (data && data.inventory) {
-        data.inventory.forEach(function(m){
-          if (m.status === 'sold') {
-            var card = document.querySelector('[data-machine-id="' + m.id + '"]');
-            if (card) card.style.display = 'none';
-          }
-        });
-      }
-    } catch(e){}
+    /* Re-hide sold machines after filter — uses global _soldIds (from sold.json fetch) */
+    var soldList = window._soldIds || [];
+    if (!soldList.length) {
+      try {
+        var data = JSON.parse(localStorage.getItem('underterra_admin_v1'));
+        if (data && data.inventory) {
+          data.inventory.forEach(function(m){ if (m.status === 'sold') soldList.push(m.id); });
+        }
+      } catch(e){}
+    }
+    soldList.forEach(function(id){
+      var card = document.querySelector('[data-machine-id="' + id + '"]');
+      if (card) card.style.display = 'none';
+    });
   }
 
   function filterCatalog(type, btn) {
@@ -4885,6 +4887,7 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
   /* ── Hide sold machines — fetches sold.json (works on ALL devices) ── */
   (function(){
     function applySold(soldIds){
+      window._soldIds = soldIds; /* global — used by _applyFilters to re-hide after filter */
       var total = document.querySelectorAll('.machine-card').length;
       var sold = 0;
       soldIds.forEach(function(id){
