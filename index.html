@@ -4585,7 +4585,16 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
   window.admSave=function(id,field,val){
     var d=getData();
     var m=d.inventory.find(function(x){return x.id===id;});
-    if(m){m[field]=val;save(d);}
+    if(m){
+      m[field]=val;
+      save(d);
+      /* If status changed, sync sold.json to GitHub so all devices update */
+      if(field==='status'){
+        var soldIds=d.inventory.filter(function(x){return x.status==='sold';}).map(function(x){return x.id;});
+        syncSoldToGitHub(soldIds);
+        renderInventory();
+      }
+    }
   };
 
   /* ─── Sales log ─── */
