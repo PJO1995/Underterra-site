@@ -3488,8 +3488,47 @@
 
   function handleSubmit(e) {
     e.preventDefault();
-    document.getElementById('form-success').style.display = 'block';
-    e.target.querySelector('button[type=submit]').style.display = 'none';
+    var btn = e.target.querySelector('button[type=submit]');
+    var successBox = document.getElementById('form-success');
+    var originalText = btn.textContent;
+
+    btn.textContent = 'Sending...';
+    btn.disabled = true;
+    successBox.style.display = 'none';
+    successBox.style.borderColor = 'var(--amber)';
+    successBox.style.color = 'var(--amber-light)';
+
+    fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName: document.getElementById('fname').value.trim(),
+        lastName:  document.getElementById('lname').value.trim(),
+        email:     document.getElementById('email').value.trim(),
+        phone:     document.getElementById('phone').value.trim(),
+        equipment: document.getElementById('equipment').value,
+        message:   document.getElementById('message').value.trim(),
+      })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.success) {
+        successBox.textContent = '✓ Thank you! We\'ll get back to you within 24 hours.';
+        successBox.style.display = 'block';
+        e.target.reset();
+        btn.style.display = 'none';
+      } else {
+        throw new Error(data.error || 'Unknown error');
+      }
+    })
+    .catch(function(err) {
+      successBox.textContent = '✗ Something went wrong. Please email us directly at ap@underterradelrio.com';
+      successBox.style.borderColor = '#e05';
+      successBox.style.color = '#ff6680';
+      successBox.style.display = 'block';
+      btn.textContent = originalText;
+      btn.disabled = false;
+    });
   }
 </script>
 
