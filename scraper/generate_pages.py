@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 
 INDEX_FILE  = "index.html"
 OUTPUT_DIR  = "machines"
-SITE_URL    = "https://underterradelrio.com"
+SITE_URL    = "https://underterrallc.com"
 CONTACT     = "ap@underterradelrio.com"
 PHONE       = "(830) 488-5594"
 COMPANY     = "Underterra LLC"

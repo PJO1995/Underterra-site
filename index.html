@@ -7,6 +7,17 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Underterra LLC — Quality Used Construction Machinery</title>
+<meta name="description" content="Quality used construction machinery for sale. Excavators, backhoes, wheel loaders, skid steers, dozers and more. Del Rio, TX.">
+<!-- Open Graph / Social Media Preview -->
+<meta property="og:type"        content="website">
+<meta property="og:url"         content="https://underterrallc.com/">
+<meta property="og:title"       content="Underterra LLC — Quality Used Construction Machinery">
+<meta property="og:description" content="Quality used construction machinery for sale. Excavators, backhoes, wheel loaders, skid steers, dozers and more. Del Rio, TX.">
+<meta property="og:image"       content="https://underterrallc.com/og-image.png">
+<meta property="og:image:width"  content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:image"       content="https://underterrallc.com/og-image.png">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -101,8 +112,8 @@
     object-fit: cover;
     opacity: 0;
     will-change: opacity;
-    /* 14 items × 6s each = 84s total cycle */
-    animation: hero-slide 84s ease-in-out infinite;
+    /* 6 items × 6s each = 36s total cycle */
+    animation: hero-slide 36s ease-in-out infinite;
   }
 
   /* Each child appears for ~6s, staggered 6s apart */
@@ -112,22 +123,14 @@
   .hero-bg > *:nth-child(4)  { animation-delay: 18s; }
   .hero-bg > *:nth-child(5)  { animation-delay: 24s; }
   .hero-bg > *:nth-child(6)  { animation-delay: 30s; }
-  .hero-bg > *:nth-child(7)  { animation-delay: 36s; }
-  .hero-bg > *:nth-child(8)  { animation-delay: 42s; }
-  .hero-bg > *:nth-child(9)  { animation-delay: 48s; }
-  .hero-bg > *:nth-child(10) { animation-delay: 54s; }
-  .hero-bg > *:nth-child(11) { animation-delay: 60s; }
-  .hero-bg > *:nth-child(12) { animation-delay: 66s; }
-  .hero-bg > *:nth-child(13) { animation-delay: 72s; }
-  .hero-bg > *:nth-child(14) { animation-delay: 78s; }
 
-  /* 6s window in 84s cycle (~7%) — smooth crossfade */
+  /* 6s window in 36s cycle (16.67%) — smooth crossfade */
   @keyframes hero-slide {
-    0%   { opacity: 0; }
-    2%   { opacity: 1; }
-    6%   { opacity: 1; }
-    8%   { opacity: 0; }
-    100% { opacity: 0; }
+    0%      { opacity: 0; }
+    5.56%   { opacity: 1; }
+    16.67%  { opacity: 1; }
+    22.22%  { opacity: 0; }
+    100%    { opacity: 0; }
   }
 
   .hero-overlay {
@@ -3771,16 +3774,17 @@
     }
   })();
 
-  /* ── Auto-play hero videos 2 & 3 when they animate in ── */
+  /* ── Auto-play hero videos when they animate in ── */
   (function(){
     var heroBg = document.querySelector('.hero-bg');
     if (!heroBg) return;
     var videos = heroBg.querySelectorAll('video');
+    var total = (heroBg.children.length) * 6000; // 6s per slot × total items
     videos.forEach(function(v, i) {
       var delay = i * 6000; // 6s per slot
       setTimeout(function playLoop(){
         v.play().catch(function(){});
-        setTimeout(playLoop, 84000); // repeat each full cycle
+        setTimeout(playLoop, total); // repeat each full cycle
       }, delay);
     });
   })();
