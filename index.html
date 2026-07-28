@@ -3471,6 +3471,11 @@
     btn.classList.add('active');
     _activeType = type;
     _applyFilters();
+    // Update URL so the link can be shared
+    var params = new URLSearchParams(window.location.search);
+    if (type === 'all') { params.delete('type'); } else { params.set('type', type); }
+    var newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '') + '#catalog';
+    history.replaceState(null, '', newUrl);
   }
 
   function filterBrand(brand, btn) {
@@ -3478,7 +3483,32 @@
     btn.classList.add('active');
     _activeBrand = brand;
     _applyFilters();
+    // Update URL so the link can be shared
+    var params = new URLSearchParams(window.location.search);
+    if (brand === 'all') { params.delete('brand'); } else { params.set('brand', brand); }
+    var newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '') + '#catalog';
+    history.replaceState(null, '', newUrl);
   }
+
+  // On page load: read URL params and apply filters
+  (function applyUrlFilters() {
+    var params = new URLSearchParams(window.location.search);
+    var type = params.get('type');
+    var brand = params.get('brand');
+    if (type) {
+      var btn = document.querySelector('.filter-btn[onclick*="filterCatalog(\'' + type + '\'"]');
+      if (btn) { filterCatalog(type, btn); }
+    }
+    if (brand) {
+      var btn = document.querySelector('.filter-btn-brand[onclick*="filterBrand(\'' + brand + '\'"]');
+      if (btn) { filterBrand(brand, btn); }
+    }
+    if ((type || brand) && window.location.hash === '#catalog') {
+      setTimeout(function() {
+        document.getElementById('catalog').scrollIntoView({ behavior: 'smooth' });
+      }, 400);
+    }
+  })();
 
   function scrollToContact(machine, category) {
     const sel = document.getElementById('equipment');
@@ -3705,14 +3735,41 @@
     // Show modal
     document.getElementById('machine-detail').classList.add('open');
     document.body.style.overflow = 'hidden';
+
+    // Update URL so this machine can be shared directly
+    var machineId = card.dataset.machineId;
+    if (machineId) {
+      var params = new URLSearchParams(window.location.search);
+      params.set('machine', machineId);
+      history.replaceState(null, '', window.location.pathname + '?' + params.toString() + '#catalog');
+    }
   }
 
   function closeDetail() {
     document.getElementById('machine-detail').classList.remove('open');
     document.body.style.overflow = '';
+    // Remove machine param from URL
+    var params = new URLSearchParams(window.location.search);
+    params.delete('machine');
+    var newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    history.replaceState(null, '', newUrl);
   }
 
   document.addEventListener('keydown', e => { if(e.key==='Escape') closeDetail(); });
+
+  // On page load: open machine detail if ?machine= is in the URL
+  (function openUrlMachine() {
+    var params = new URLSearchParams(window.location.search);
+    var machineId = params.get('machine');
+    if (!machineId) return;
+    var card = document.querySelector('[data-machine-id="' + machineId + '"]');
+    if (card) {
+      setTimeout(function() {
+        openDetail(card);
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 500);
+    }
+  })();
 
   /* ── Auto-play hero videos 2 & 3 when they animate in ── */
   (function(){
