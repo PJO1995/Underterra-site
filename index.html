@@ -122,13 +122,12 @@
     object-fit: cover;
   }
 
-  /* YouTube iframe background cover */
+  /* YouTube iframe background cover — oversized 16:9 so YouTube never pillarboxes */
   .hero-bg iframe {
     top: 50%; left: 50%;
-    width: 177.78vh;   /* 16:9 based on viewport height */
-    height: 56.25vw;   /* 16:9 based on viewport width */
-    min-width: 100%;
-    min-height: 100%;
+    width: 200vw;
+    height: 112.5vw;   /* 200 × 9/16 — keeps exact 16:9 ratio */
+    display: block;
     transform: translate(-50%, -50%);
     pointer-events: none;
     border: none;
