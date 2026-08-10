@@ -1220,9 +1220,9 @@
 <!-- HERO -->
 <section class="hero" id="home">
   <div class="hero-bg">
-    <iframe src="https://www.youtube-nocookie.com/embed/dWK_P18q0VA?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playlist=dWK_P18q0VA&playsinline=1" frameborder="0" allow="autoplay; encrypted-media" title="Underterra hero video 1"></iframe>
-    <iframe src="https://www.youtube-nocookie.com/embed/yong3t_JKp0?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playlist=yong3t_JKp0&playsinline=1" frameborder="0" allow="autoplay; encrypted-media" title="Underterra hero video 2"></iframe>
-    <iframe src="https://www.youtube-nocookie.com/embed/8GEryIyMjmM?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playlist=8GEryIyMjmM&playsinline=1" frameborder="0" allow="autoplay; encrypted-media" title="Underterra hero video 3"></iframe>
+    <iframe id="yt-hero-0" src="https://www.youtube-nocookie.com/embed/dWK_P18q0VA?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playlist=dWK_P18q0VA&playsinline=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" title="Underterra hero video 1"></iframe>
+    <iframe id="yt-hero-1" src="https://www.youtube-nocookie.com/embed/yong3t_JKp0?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playlist=yong3t_JKp0&playsinline=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" title="Underterra hero video 2"></iframe>
+    <iframe id="yt-hero-2" src="https://www.youtube-nocookie.com/embed/8GEryIyMjmM?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playlist=8GEryIyMjmM&playsinline=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" title="Underterra hero video 3"></iframe>
     <img src="underterra-imgs/hero-real-1.jpg" alt="">
     <img src="underterra-imgs/hero-real-2.jpg" alt="" loading="lazy">
     <img src="underterra-imgs/hero-real-3.jpg" alt="" loading="lazy">
@@ -3795,19 +3795,34 @@
     }
   })();
 
-  /* ── Auto-play hero videos when they animate in ── */
+  /* ── YouTube IFrame API — keep hero videos always playing, no pause overlay ── */
   (function(){
-    var heroBg = document.querySelector('.hero-bg');
-    if (!heroBg) return;
-    var videos = heroBg.querySelectorAll('video');
-    var total = (heroBg.children.length) * 6000; // 6s per slot × total items
-    videos.forEach(function(v, i) {
-      var delay = i * 6000; // 6s per slot
-      setTimeout(function playLoop(){
-        v.play().catch(function(){});
-        setTimeout(playLoop, total); // repeat each full cycle
-      }, delay);
-    });
+    var ytPlayers = [];
+
+    window.onYouTubeIframeAPIReady = function() {
+      ['yt-hero-0','yt-hero-1','yt-hero-2'].forEach(function(id) {
+        var player = new YT.Player(id, {
+          events: {
+            onReady: function(e) {
+              e.target.mute();
+              e.target.playVideo();
+            },
+            onStateChange: function(e) {
+              // 0=ended, 2=paused — force back to playing immediately
+              if (e.data === 0 || e.data === 2) {
+                e.target.playVideo();
+              }
+            }
+          }
+        });
+        ytPlayers.push(player);
+      });
+    };
+
+    // Load YouTube IFrame API script
+    var tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
   })();
 
   function carouselNav(btn, dir) {
