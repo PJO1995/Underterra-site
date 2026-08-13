@@ -20,6 +20,7 @@ if git diff --staged --quiet; then
   echo "✅ El inventario ya está al día — no hay máquinas nuevas."
 else
   git commit -m "🤖 Sync inventario MachineryTrader [$(date +'%Y-%m-%d')]"
+  git pull --rebase
   git push
   echo ""
   echo "🚀 ¡Listo! El sitio se actualizará en ~30 segundos en underterrallc.com"
