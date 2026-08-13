@@ -389,6 +389,22 @@ def build_machine_card(listing, machine_id, stock_num):
     </div>"""
     return card
 
+# ── Admin entry builder ───────────────────────────────────────────────────────────
+
+def build_adm_entry(listing, machine_id, stock_num):
+    """Generate the admMachines JS object entry for a new machine."""
+    name    = listing["name"].upper()
+    category = listing["category"]
+    mtype   = listing["type"]
+    price_str = listing["price"]
+    price_m = re.search(r'[\d,]+', price_str.replace(',', ''))
+    list_price = int(price_m.group(0)) if price_m else 0
+    return (
+        f"    {{id:'{machine_id}',name:'{name}',       "
+        f"category:'{category}',      type:'{mtype}',     "
+        f"listPrice:{list_price},  stockNum:'{stock_num}'}},\n"
+    )
+
 # ── Index.html updater ────────────────────────────────────────────────────────────
 
 def update_index(listings):
@@ -415,12 +431,14 @@ def update_index(listings):
         print("  ✓ No new listings — nothing to update.")
         return False
 
-    # Generate cards for new listings
+    # Generate cards and admMachines entries for new listings
     new_cards_html = ""
+    new_adm_entries = ""
     for listing in new_listings:
         machine_id = f"m{next_id_num:02d}"
         stock_num = f"UT-{next_stock_num:03d}"
         new_cards_html += build_machine_card(listing, machine_id, stock_num)
+        new_adm_entries += build_adm_entry(listing, machine_id, stock_num)
         next_id_num += 1
         next_stock_num += 1
 
@@ -434,11 +452,19 @@ def update_index(listings):
 
     new_html = html.replace(GRID_CLOSE, new_cards_html + "\n\n" + GRID_CLOSE, 1)
 
+    # Insert admMachines entries before the closing ];
+    ADM_CLOSE = '  ];\n\n  var TERP_RATE'
+    if ADM_CLOSE in new_html:
+        new_html = new_html.replace(ADM_CLOSE, new_adm_entries + '  ];\n\n  var TERP_RATE', 1)
+        print(f"  ✓ Added {len(new_listings)} entry(ies) to admMachines")
+    else:
+        print("  ⚠ Could not locate admMachines closing marker — admin panel not updated")
+
     # Update catalog count text
     total = len(existing_ids) + len(new_listings)
     new_html = re.sub(
-        r'Showing \d+ of \d+ active listings',
-        f'Showing {total} of {total} active listings',
+        r'Showing all \d+ active listings',
+        f'Showing all {total} active listings',
         new_html
     )
 
