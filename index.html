@@ -151,10 +151,11 @@
 
   /* Hides YouTube loading/play-button state on initial page load */
   .hero-load-cover {
-    position: absolute; inset: 0; z-index: 0;
+    position: absolute; inset: 0; z-index: 3;
     background: var(--black);
     pointer-events: none;
     animation: hero-load-fade 3s ease-out forwards;
+    transition: opacity 0.25s ease;
   }
   @keyframes hero-load-fade {
     0%   { opacity: 1; }
@@ -1233,7 +1234,6 @@
     <img src="underterra-imgs/hero-real-8.jpg" alt="" loading="lazy">
     <img src="underterra-imgs/hero-real-9.jpg" alt="" loading="lazy">
     <img src="underterra-imgs/hero-real-10.jpg" alt="" loading="lazy">
-    <img src="underterra-imgs/hero-real-11.jpg" alt="" loading="lazy" style="object-position: center 75%">
   </div>
   <div class="hero-load-cover"></div>
   <div class="hero-overlay"></div>
@@ -3859,9 +3859,17 @@
               e.target.playVideo();
             },
             onStateChange: function(e) {
-              // 0=ended, 2=paused — force back to playing immediately
+              // 0=ended (loop restart), 2=paused — cover flash then resume
               if (e.data === 0 || e.data === 2) {
+                var cover = document.querySelector('.hero-load-cover');
+                if (cover) {
+                  cover.style.animation = 'none';
+                  cover.style.opacity = '1';
+                }
                 e.target.playVideo();
+                setTimeout(function() {
+                  if (cover) cover.style.opacity = '0';
+                }, 400);
               }
             }
           }
