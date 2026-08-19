@@ -1221,9 +1221,9 @@
 <!-- HERO -->
 <section class="hero" id="home">
   <div class="hero-bg">
-    <iframe id="yt-hero-0" src="https://www.youtube-nocookie.com/embed/dWK_P18q0VA?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playlist=dWK_P18q0VA&playsinline=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" title="Underterra hero video 1"></iframe>
-    <iframe id="yt-hero-1" src="https://www.youtube-nocookie.com/embed/yong3t_JKp0?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playlist=yong3t_JKp0&playsinline=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" title="Underterra hero video 2"></iframe>
-    <iframe id="yt-hero-2" src="https://www.youtube-nocookie.com/embed/8GEryIyMjmM?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playlist=8GEryIyMjmM&playsinline=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" title="Underterra hero video 3"></iframe>
+    <iframe id="yt-hero-0" src="https://www.youtube-nocookie.com/embed/dWK_P18q0VA?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" title="Underterra hero video 1"></iframe>
+    <iframe id="yt-hero-1" src="https://www.youtube-nocookie.com/embed/yong3t_JKp0?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" title="Underterra hero video 2"></iframe>
+    <iframe id="yt-hero-2" src="https://www.youtube-nocookie.com/embed/8GEryIyMjmM?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" title="Underterra hero video 3"></iframe>
     <img src="underterra-imgs/hero-real-1.jpg" alt="">
     <img src="underterra-imgs/hero-real-2.jpg" alt="" loading="lazy">
     <img src="underterra-imgs/hero-real-3.jpg" alt="" loading="lazy">
@@ -3859,17 +3859,19 @@
               e.target.playVideo();
             },
             onStateChange: function(e) {
-              // 0=ended (loop restart), 2=paused — cover flash then resume
+              // 0=ended — seek to start and loop manually (avoids YouTube loop UI flash)
+              // 2=paused — resume immediately
               if (e.data === 0 || e.data === 2) {
                 var cover = document.querySelector('.hero-load-cover');
                 if (cover) {
                   cover.style.animation = 'none';
                   cover.style.opacity = '1';
                 }
+                if (e.data === 0) { e.target.seekTo(0, true); }
                 e.target.playVideo();
                 setTimeout(function() {
                   if (cover) cover.style.opacity = '0';
-                }, 400);
+                }, 500);
               }
             }
           }
