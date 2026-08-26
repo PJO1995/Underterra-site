@@ -111,8 +111,8 @@
     position: absolute;
     opacity: 0;
     will-change: opacity;
-    /* 5 items × 6s each = 30s total cycle */
-    animation: hero-slide 30s ease-in-out infinite;
+    /* 10 items × 5s each = 50s total cycle */
+    animation: hero-slide 50s ease-in-out infinite;
   }
 
   .hero-bg video,
@@ -122,45 +122,25 @@
     object-fit: cover;
   }
 
-  /* YouTube iframe background cover — oversized 16:9 so YouTube never pillarboxes */
-  .hero-bg iframe {
-    top: 50%; left: 50%;
-    width: 200vw;
-    height: 112.5vw;   /* 200 × 9/16 — keeps exact 16:9 ratio */
-    display: block;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    border: none;
-  }
-
-  /* Each child appears for ~6s, staggered 6s apart */
+  /* Each child appears for ~5s, staggered 5s apart */
   .hero-bg > *:nth-child(1)  { animation-delay: 0s;  }
-  .hero-bg > *:nth-child(2)  { animation-delay: 6s;  }
-  .hero-bg > *:nth-child(3)  { animation-delay: 12s; }
-  .hero-bg > *:nth-child(4)  { animation-delay: 18s; }
-  .hero-bg > *:nth-child(5)  { animation-delay: 24s; }
+  .hero-bg > *:nth-child(2)  { animation-delay: 5s;  }
+  .hero-bg > *:nth-child(3)  { animation-delay: 10s; }
+  .hero-bg > *:nth-child(4)  { animation-delay: 15s; }
+  .hero-bg > *:nth-child(5)  { animation-delay: 20s; }
+  .hero-bg > *:nth-child(6)  { animation-delay: 25s; }
+  .hero-bg > *:nth-child(7)  { animation-delay: 30s; }
+  .hero-bg > *:nth-child(8)  { animation-delay: 35s; }
+  .hero-bg > *:nth-child(9)  { animation-delay: 40s; }
+  .hero-bg > *:nth-child(10) { animation-delay: 45s; }
 
-  /* 6s window in 30s cycle — smooth crossfade */
+  /* 5s window in 50s cycle — smooth crossfade */
   @keyframes hero-slide {
-    0%      { opacity: 0; }
-    6.67%   { opacity: 1; }
-    20%     { opacity: 1; }
-    26.67%  { opacity: 0; }
-    100%    { opacity: 0; }
-  }
-
-  /* Hides YouTube loading/play-button state on initial page load */
-  .hero-load-cover {
-    position: absolute; inset: 0; z-index: 3;
-    background: var(--black);
-    pointer-events: none;
-    animation: hero-load-fade 3s ease-out forwards;
-    transition: opacity 0.25s ease;
-  }
-  @keyframes hero-load-fade {
-    0%   { opacity: 1; }
-    60%  { opacity: 1; }
-    100% { opacity: 0; }
+    0%    { opacity: 0; }
+    2%    { opacity: 1; }
+    8%    { opacity: 1; }
+    10%   { opacity: 0; }
+    100%  { opacity: 0; }
   }
 
   .hero-overlay {
@@ -1221,9 +1201,6 @@
 <!-- HERO -->
 <section class="hero" id="home">
   <div class="hero-bg">
-    <iframe id="yt-hero-0" src="https://www.youtube-nocookie.com/embed/dWK_P18q0VA?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playlist=dWK_P18q0VA&playsinline=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" title="Underterra hero video 1"></iframe>
-    <iframe id="yt-hero-1" src="https://www.youtube-nocookie.com/embed/yong3t_JKp0?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playlist=yong3t_JKp0&playsinline=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" title="Underterra hero video 2"></iframe>
-    <iframe id="yt-hero-2" src="https://www.youtube-nocookie.com/embed/8GEryIyMjmM?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playlist=8GEryIyMjmM&playsinline=1&enablejsapi=1" frameborder="0" allow="autoplay; encrypted-media" title="Underterra hero video 3"></iframe>
     <img src="underterra-imgs/hero-real-1.jpg" alt="">
     <img src="underterra-imgs/hero-real-2.jpg" alt="" loading="lazy">
     <img src="underterra-imgs/hero-real-3.jpg" alt="" loading="lazy">
@@ -1235,7 +1212,6 @@
     <img src="underterra-imgs/hero-real-9.jpg" alt="" loading="lazy">
     <img src="underterra-imgs/hero-real-10.jpg" alt="" loading="lazy">
   </div>
-  <div class="hero-load-cover"></div>
   <div class="hero-overlay"></div>
   <div class="hero-logo-corner">
     <img src="underterra-imgs/Underterra-01.png" alt="Underterra LLC">
@@ -3846,36 +3822,6 @@
     }
   })();
 
-  /* ── YouTube IFrame API — keep hero videos always playing, no pause overlay ── */
-  (function(){
-    var ytPlayers = [];
-
-    window.onYouTubeIframeAPIReady = function() {
-      ['yt-hero-0','yt-hero-1','yt-hero-2'].forEach(function(id) {
-        var player = new YT.Player(id, {
-          events: {
-            onReady: function(e) {
-              e.target.mute();
-              e.target.playVideo();
-            },
-            onStateChange: function(e) {
-              // Only handle unexpected pauses (state=2).
-              // State=0 (loop end) is handled by YouTube internally via loop=1 — fast enough to not need cover.
-              if (e.data === 2) {
-                e.target.playVideo();
-              }
-            }
-          }
-        });
-        ytPlayers.push(player);
-      });
-    };
-
-    // Load YouTube IFrame API script
-    var tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(tag);
-  })();
 
   function carouselNav(btn, dir) {
     const box = btn.closest('.machine-img');
