@@ -70,11 +70,10 @@ def listing_id_from_url(url):
     return m.group(1) if m else ""
 
 
-def fetch_all_images(listing_url):
-    """Fetch all gallery image URLs from an MT listing detail page.
-    Opens a real Chrome browser, harvests CDN image URLs from initial load,
-    then clicks the carousel Next button to trigger any lazy-loaded images.
-    Returns a list of unique image URLs (deduplicated by id= param), or None.
+def fetch_listing_detail(listing_url):
+    """Fetch all gallery image URLs AND hours from an MT listing detail page.
+    Opens a real Chrome browser, harvests CDN image URLs and specs.
+    Returns (images_list_or_None, hours_string_or_empty).
     """
     try:
         with sync_playwright() as p:
@@ -158,12 +157,45 @@ def fetch_all_images(listing_url):
                 if not clicked:
                     break
 
+            # Extract hours from the detail page specs table
+            hours_detail = ""
+            try:
+                soup = BeautifulSoup(page.content(), "html.parser")
+                # Look for a table row or definition with "Hours"
+                for el in soup.find_all(["td", "th", "dt", "li", "div", "span"]):
+                    if el.get_text(strip=True).lower() == "hours":
+                        # Try next sibling or parent's next sibling
+                        nxt = el.find_next_sibling()
+                        if nxt:
+                            val = nxt.get_text(strip=True)
+                            hm = re.search(r'[\d,]+', val)
+                            if hm:
+                                hours_detail = hm.group(0)
+                                break
+                        parent = el.parent
+                        if parent:
+                            nxt_p = parent.find_next_sibling()
+                            if nxt_p:
+                                val = nxt_p.get_text(strip=True)
+                                hm = re.search(r'[\d,]+', val)
+                                if hm:
+                                    hours_detail = hm.group(0)
+                                    break
+                # Fallback: regex on full page text
+                if not hours_detail:
+                    page_text = soup.get_text(" ")
+                    hm = re.search(r'Hours[:\s]+([\d,]+)', page_text)
+                    if hm:
+                        hours_detail = hm.group(1)
+            except Exception:
+                pass
+
             browser.close()
-            return images if images else None
+            return (images if images else None), hours_detail
 
     except Exception as e:
-        print(f"  ⚠ Could not fetch images for {listing_url}: {e}")
-    return None
+        print(f"  ⚠ Could not fetch detail for {listing_url}: {e}")
+    return None, ""
 
 # ── Scraper ──────────────────────────────────────────────────────────────────────
 
@@ -339,9 +371,12 @@ def build_machine_card(listing, machine_id, stock_num):
     hours = listing["hours"]
     title_full = listing["title"]
 
-    # Fetch all gallery images from MT listing detail page
+    # Fetch images AND hours from MT listing detail page
     print(f"  Fetching images for {title_full}...")
-    img_list = fetch_all_images(mt_url)
+    img_list, hours_detail = fetch_listing_detail(mt_url)
+    # Prefer detail-page hours over search-page hours (more reliable)
+    if hours_detail:
+        hours = hours_detail
 
     if img_list:
         imgs_html = "\n".join(
