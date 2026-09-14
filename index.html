@@ -4414,6 +4414,11 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
         </div>
 
         <div class="adm-section-title">Data Management</div>
+        <div style="display:flex;gap:0.8rem;align-items:center;flex-wrap:wrap;margin-bottom:0.8rem;">
+          <button class="adm-btn-sm" onclick="admBackupNow()">☁ Backup to GitHub Now</button>
+          <button class="adm-btn-sm" onclick="admRestoreFromGitHub(false)">↓ Restore from GitHub</button>
+        </div>
+        <div id="adm-inv-backup-status" style="font-size:0.78rem;margin-bottom:0.8rem;color:#555;"></div>
         <div style="display:flex;gap:0.8rem;align-items:center;flex-wrap:wrap;">
           <button class="adm-btn-sm" onclick="admResetData()" style="border-color:#e04040;color:#e04040;">⚠ Reset All Data</button>
           <span style="color:#444;font-size:0.78rem;">Resets all costs, statuses, notes to defaults — cannot be undone.</span>
@@ -4437,7 +4442,7 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
           Open this panel anytime: <kbd class="adm-kbd">Ctrl+Shift+A</kbd>
           &nbsp;or add&nbsp; <kbd class="adm-kbd">#admin</kbd> &nbsp;to the page URL.<br>
           TERP Surcharge rate: <strong style="color:#ffd51e;">1.5%</strong> — estimated on your cost basis (equipment you purchased).<br>
-          All data is saved in this browser's local storage and persists between sessions.
+          Data is saved in localStorage and backed up automatically to GitHub on each save.
         </div>
       </div>
 
@@ -4659,6 +4664,10 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
     loginEl.style.display='none';
     panelEl.classList.add('visible');
     renderDashboard();
+    /* Auto-restore from GitHub if localStorage looks empty (all costs=0, no sold machines) */
+    var d = getData();
+    var hasData = d.inventory.some(function(m){ return m.cost > 0 || m.status !== 'available'; });
+    if(!hasData){ admRestoreFromGitHub(true); }
   }
   window.admClose=function(){overlay.style.display='none';};
 
@@ -4827,6 +4836,10 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
         var soldIds=d.inventory.filter(function(x){return x.status==='sold';}).map(function(x){return x.id;});
         syncSoldToGitHub(soldIds);
         renderInventory();
+      }
+      /* Sync full inventory backup on important field changes */
+      if(field==='cost'||field==='status'||field==='notes'||field==='serial'){
+        syncInventoryToGitHub(d);
       }
     }
   };
@@ -5032,6 +5045,8 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
     /* Sync sold list to GitHub so ALL devices (mobile/desktop) see it */
     var soldIds = d.inventory.filter(function(x){ return x.status==='sold'; }).map(function(x){ return x.id; });
     syncSoldToGitHub(soldIds);
+    /* Backup full inventory data to GitHub */
+    syncInventoryToGitHub(d);
     admCloseDeal();
     /* Refresh whichever tab is visible */
     var invTab=document.getElementById('tab-inventory');
@@ -5090,6 +5105,87 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
         if(statusEl) statusEl.innerHTML = '❌ <span style="color:#e04040">Network error. Check connection.</span>';
       });
   }
+
+  /* ─── GitHub Inventory Backup ─── */
+  var GH_INV_FILE = 'inventory.json';
+
+  function syncInventoryToGitHub(d){
+    var token = localStorage.getItem('underterra_gh_token');
+    if(!token) return;
+    var apiUrl = 'https://api.github.com/repos/' + GH_REPO + '/contents/' + GH_INV_FILE;
+    var adminData = {
+      lastUpdated: new Date().toISOString().slice(0,10),
+      inventory: d.inventory.map(function(m){
+        return {id:m.id, cost:m.cost||0, status:m.status||'available',
+                soldPrice:m.soldPrice||0, soldDate:m.soldDate||'',
+                buyerName:m.buyerName||'', buyerContact:m.buyerContact||'',
+                dealNotes:m.dealNotes||'', notes:m.notes||'', serial:m.serial||''};
+      })
+    };
+    var newContent = btoa(unescape(encodeURIComponent(JSON.stringify(adminData, null, 2) + '\n')));
+    fetch(apiUrl, { headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github.v3+json' }})
+      .then(function(r){ return r.json(); })
+      .then(function(fileData){
+        var sha = fileData.sha || null;
+        var body = { message:'Backup admin inventory', content: newContent };
+        if(sha) body.sha = sha;
+        return fetch(apiUrl, {
+          method: 'PUT',
+          headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github.v3+json', 'Content-Type':'application/json' },
+          body: JSON.stringify(body)
+        });
+      })
+      .then(function(r){
+        var el = document.getElementById('adm-inv-backup-status');
+        if(el && r && r.ok){
+          el.innerHTML = '✅ <span style="color:#4ec994">Backup guardado en GitHub.</span>';
+          setTimeout(function(){ el.textContent=''; }, 4000);
+        }
+      })
+      .catch(function(){});
+  }
+
+  window.admBackupNow = function(){
+    var el = document.getElementById('adm-inv-backup-status');
+    if(el) el.textContent = '⏳ Guardando backup...';
+    syncInventoryToGitHub(getData());
+  };
+
+  window.admRestoreFromGitHub = function(silent){
+    var token = localStorage.getItem('underterra_gh_token');
+    var statusEl = document.getElementById('adm-inv-backup-status');
+    if(!token){
+      if(!silent && statusEl) statusEl.innerHTML = '⚠ <span style="color:#e08040">No hay token configurado en Settings.</span>';
+      return;
+    }
+    if(!silent && statusEl) statusEl.textContent = '⏳ Restaurando desde GitHub...';
+    fetch('/inventory.json?_='+Date.now())
+      .then(function(r){ return r.json(); })
+      .then(function(ghData){
+        if(!ghData || !Array.isArray(ghData.inventory) || !ghData.inventory.length) return;
+        var d = getData();
+        ghData.inventory.forEach(function(gh){
+          var local = d.inventory.find(function(m){ return m.id === gh.id; });
+          if(local){
+            if(gh.cost)         local.cost         = gh.cost;
+            if(gh.status)       local.status       = gh.status;
+            if(gh.soldPrice)    local.soldPrice    = gh.soldPrice;
+            if(gh.soldDate)     local.soldDate     = gh.soldDate;
+            if(gh.buyerName)    local.buyerName    = gh.buyerName;
+            if(gh.buyerContact) local.buyerContact = gh.buyerContact;
+            if(gh.dealNotes)    local.dealNotes    = gh.dealNotes;
+            if(gh.notes)        local.notes        = gh.notes;
+            if(gh.serial)       local.serial       = gh.serial;
+          }
+        });
+        save(d);
+        if(!silent && statusEl) statusEl.innerHTML = '✅ <span style="color:#4ec994">Datos restaurados desde GitHub ('+(ghData.lastUpdated||'?')+').</span>';
+        renderDashboard(); renderInventory(); renderSales();
+      })
+      .catch(function(){
+        if(!silent && statusEl) statusEl.innerHTML = '❌ <span style="color:#e04040">No se pudo restaurar. Verifica conexión.</span>';
+      });
+  };
 
   /* ─── Change password ─── */
   window.admChangePw=function(){
