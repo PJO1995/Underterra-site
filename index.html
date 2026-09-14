@@ -4620,7 +4620,7 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
           m.stockNum = def.stockNum||'';
           m.name     = def.name;
           m.category = def.category;
-          m.listPrice= def.listPrice;
+          if(!('listPrice'   in m)) m.listPrice=def.listPrice;
           if(!('serial'      in m)) m.serial='';
           if(!('buyerName'   in m)) m.buyerName='';
           if(!('buyerContact'in m)) m.buyerContact='';
@@ -4800,7 +4800,8 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
         +'<td>'+(m.stockNum?'<span style="background:rgba(255,213,30,0.12);color:#ffd51e;border:1px solid rgba(255,213,30,0.3);border-radius:3px;font-size:0.72rem;font-weight:700;letter-spacing:1.5px;padding:2px 7px;white-space:nowrap">'+escH(m.stockNum)+'</span>':'<span style="color:#333">—</span>')+'</td>'
         +'<td><strong style="color:#e8e8e8">'+m.name+'</strong></td>'
         +'<td style="color:#666;font-size:0.76rem">'+m.category+'</td>'
-        +'<td style="color:#ffd51e">'+fmt(m.listPrice)+'</td>'
+        +'<td><input class="adm-input" type="number" min="0" style="color:#ffd51e;font-weight:700" value="'+(m.listPrice||0)+'"'
+            +' onchange="admSave(\''+m.id+'\',\'listPrice\',+this.value||0)"></td>'
         +'<td><input class="adm-input" type="number" min="0" value="'+(m.cost||'')+'" placeholder="0"'
             +' onchange="admSave(\''+m.id+'\',\'cost\',+this.value||0)"></td>'
         +'<td>'
@@ -4838,8 +4839,12 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
         renderInventory();
       }
       /* Sync full inventory backup on important field changes */
-      if(field==='cost'||field==='status'||field==='notes'||field==='serial'){
+      if(field==='cost'||field==='status'||field==='notes'||field==='serial'||field==='listPrice'){
         syncInventoryToGitHub(d);
+      }
+      /* Listed value on Dashboard depends on listPrice — keep it fresh */
+      if(field==='listPrice'){
+        renderDashboard();
       }
     }
   };
@@ -5117,6 +5122,7 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
       lastUpdated: new Date().toISOString().slice(0,10),
       inventory: d.inventory.map(function(m){
         return {id:m.id, cost:m.cost||0, status:m.status||'available',
+                listPrice:m.listPrice||0,
                 soldPrice:m.soldPrice||0, soldDate:m.soldDate||'',
                 buyerName:m.buyerName||'', buyerContact:m.buyerContact||'',
                 dealNotes:m.dealNotes||'', notes:m.notes||'', serial:m.serial||''};
@@ -5168,6 +5174,7 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
           var local = d.inventory.find(function(m){ return m.id === gh.id; });
           if(local){
             if(gh.cost)         local.cost         = gh.cost;
+            if(gh.listPrice)    local.listPrice    = gh.listPrice;
             if(gh.status)       local.status       = gh.status;
             if(gh.soldPrice)    local.soldPrice    = gh.soldPrice;
             if(gh.soldDate)     local.soldDate     = gh.soldDate;
@@ -5262,6 +5269,27 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
           }
         }catch(e){}
       });
+  })();
+  </script>
+
+  <script>
+  /* ── Apply admin-edited list prices — fetches inventory.json (works on ALL devices) ── */
+  (function(){
+    function fmtPrice(n){ return '$' + Number(n||0).toLocaleString('en-US'); }
+    function applyPrices(list){
+      (list||[]).forEach(function(m){
+        if(!m || !m.id || !m.listPrice) return;
+        var card = document.querySelector('[data-machine-id="' + m.id + '"]');
+        if(!card) return;
+        var priceEl = card.querySelector('.machine-price');
+        if(!priceEl) return;
+        priceEl.innerHTML = '<span>Price</span>' + fmtPrice(m.listPrice);
+      });
+    }
+    fetch('/inventory.json?_=' + Date.now())
+      .then(function(r){ return r.json(); })
+      .then(function(data){ applyPrices(data && data.inventory); })
+      .catch(function(){});
   })();
   </script>
 
