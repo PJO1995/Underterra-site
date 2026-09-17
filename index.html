@@ -4487,13 +4487,10 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
       <!-- SETTINGS TAB -->
       <div id="tab-settings" style="display:none">
         <div class="adm-section-title">Security</div>
-        <p style="color:#666;font-size:0.82rem;margin:0 0 0.8rem;">Change your admin password:</p>
-        <div class="adm-changepw">
-          <input type="password" id="adm-new-pw" placeholder="New password">
-          <input type="password" id="adm-confirm-pw" placeholder="Confirm password">
-          <button class="adm-btn-sm" onclick="admChangePw()">Update Password</button>
-          <span class="adm-msg" id="adm-pw-msg"></span>
-        </div>
+        <p style="color:#666;font-size:0.82rem;margin:0 0 0.8rem;">
+          La contraseña del panel se verifica en el servidor (Vercel), no en el navegador.<br>
+          Para cambiarla: Vercel → tu proyecto → Settings → Environment Variables → edita <strong style="color:#aaa;">ADMIN_PASSWORD</strong> → Redeploy.
+        </p>
 
         <div class="adm-section-title">Data Management</div>
         <div style="display:flex;gap:0.8rem;align-items:center;flex-wrap:wrap;margin-bottom:0.8rem;">
@@ -4508,16 +4505,8 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
 
         <div class="adm-section-title">GitHub Sync</div>
         <p style="color:#666;font-size:0.82rem;margin:0 0 0.8rem;">
-          Cuando guardas un deal, se sincroniza automáticamente para que <strong style="color:#aaa;">todos los dispositivos</strong> (mobile, desktop) vean la máquina como vendida.<br>
-          <a href="https://github.com/settings/tokens/new?scopes=repo&description=Underterra+Sold+Sync" target="_blank" style="color:#ffd51e;text-decoration:none;">→ Crear token en GitHub</a>
-          &nbsp;(selecciona scope: <strong style="color:#aaa;">repo</strong>)
+          La sincronización con GitHub corre en el servidor de forma automática y segura — ya no se guarda ningún token en este navegador.
         </p>
-        <div class="adm-changepw">
-          <input type="password" id="adm-gh-token" placeholder="ghp_xxxxxxxxxxxxxxxx" autocomplete="off">
-          <button class="adm-btn-sm" onclick="admSaveGhToken()">Save Token</button>
-          <span class="adm-msg" id="adm-gh-msg"></span>
-        </div>
-        <div id="adm-gh-status" style="font-size:0.78rem;margin-top:0.5rem;color:#555;"></div>
 
         <div class="adm-section-title">Quick Access</div>
         <div style="color:#555;font-size:0.82rem;line-height:2;">
@@ -4673,11 +4662,6 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
 
   var TERP_RATE=0.015;
   var LS_KEY='underterra_admin_v1';
-  var LS_PW='underterra_admin_pw';
-
-  /* Simple hash (client-side, decorative security) */
-  function h(s){var n=5381;for(var i=0;i<s.length;i++)n=((n<<5)+n)+s.charCodeAt(i)|0;return n.toString(36);}
-  var DEFAULT_HASH=h('Underterra2025');
 
   /* ─── LocalStorage helpers ─── */
   function loadData(){
@@ -4727,7 +4711,6 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
   }
   function save(d){try{localStorage.setItem(LS_KEY,JSON.stringify(d));}catch(e){}}
   function getData(){return loadData();}
-  function getPwHash(){return localStorage.getItem(LS_PW)||DEFAULT_HASH;}
 
   /* ─── Panel open/close ─── */
   var overlay=document.getElementById('admin-overlay');
@@ -4736,7 +4719,10 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
 
   function openOverlay(){
     overlay.style.display='flex';
-    if(sessionStorage.getItem('adm_auth')==='1'){showPanel();}else{showLogin();}
+    showLogin();
+    fetch('/api/admin-check',{credentials:'include'})
+      .then(function(r){ if(r.ok) showPanel(); })
+      .catch(function(){});
   }
   function showLogin(){
     loginEl.style.display='flex';
@@ -4747,31 +4733,65 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
   function showPanel(){
     loginEl.style.display='none';
     panelEl.classList.add('visible');
-    renderDashboard();
-    /* Auto-restore from GitHub if localStorage looks empty (all costs=0, no sold machines) */
-    var d = getData();
-    var hasData = d.inventory.some(function(m){ return m.cost > 0 || m.status !== 'available'; });
-    if(!hasData){ admRestoreFromGitHub(true); }
+    admHydrateFromServer(function(){ renderDashboard(); });
   }
   window.admClose=function(){overlay.style.display='none';};
 
-  /* ─── Auth ─── */
+  /* ─── Auth (verified server-side by /api/admin-login) ─── */
   window.admLogin=function(){
     var pw=document.getElementById('adm-pw-input').value;
-    if(h(pw)===getPwHash()){
-      sessionStorage.setItem('adm_auth','1');
-      showPanel();
-    }else{
-      document.getElementById('adm-login-err').textContent='Incorrect password.';
-      document.getElementById('adm-pw-input').value='';
-      document.getElementById('adm-pw-input').focus();
-    }
+    var errEl=document.getElementById('adm-login-err');
+    errEl.textContent='';
+    fetch('/api/admin-login',{
+      method:'POST',
+      credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({password:pw})
+    }).then(function(r){
+      if(r.ok){ showPanel(); }
+      else{
+        errEl.textContent='Incorrect password.';
+        document.getElementById('adm-pw-input').value='';
+        document.getElementById('adm-pw-input').focus();
+      }
+    }).catch(function(){
+      errEl.textContent='Network error — try again.';
+    });
   };
   window.admLogout=function(){
-    sessionStorage.removeItem('adm_auth');
+    fetch('/api/admin-logout',{method:'POST',credentials:'include'}).catch(function(){});
     admClose();
     showLogin();
   };
+
+  /* ─── Pull authoritative costs/buyers/status from the server (requires a valid session) ─── */
+  function admHydrateFromServer(cb){
+    fetch('/api/admin-data',{credentials:'include'})
+      .then(function(r){ if(!r.ok) throw new Error('unauthorized'); return r.json(); })
+      .then(function(serverData){
+        if(serverData && Array.isArray(serverData.inventory)){
+          var d=getData();
+          serverData.inventory.forEach(function(sv){
+            var local=d.inventory.find(function(m){return m.id===sv.id;});
+            if(local){
+              if('cost' in sv)          local.cost=sv.cost||0;
+              if(sv.listPrice)          local.listPrice=sv.listPrice;
+              if('status' in sv)        local.status=sv.status||'available';
+              if('soldPrice' in sv)     local.soldPrice=sv.soldPrice||0;
+              if('soldDate' in sv)      local.soldDate=sv.soldDate||'';
+              if('buyerName' in sv)     local.buyerName=sv.buyerName||'';
+              if('buyerContact' in sv)  local.buyerContact=sv.buyerContact||'';
+              if('dealNotes' in sv)     local.dealNotes=sv.dealNotes||'';
+              if('notes' in sv)         local.notes=sv.notes||'';
+              if(sv.serial)             local.serial=sv.serial;
+            }
+          });
+          save(d);
+        }
+        if(cb) cb();
+      })
+      .catch(function(){ if(cb) cb(); });
+  }
 
   /* ─── Tab switching ─── */
   var TABS=['dashboard','inventory','sales','settings'];
@@ -5145,64 +5165,29 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
     renderDashboard();
   };
 
-  /* ─── GitHub Token ─── */
-  var GH_REPO = 'PJO1995/Underterra-site';
-  var GH_FILE = 'sold.json';
+  /* ─── Server-side sync ─ no GitHub token ever touches the browser (see /api/admin-save) ─── */
 
-  window.admSaveGhToken = function(){
-    var token = document.getElementById('adm-gh-token').value.trim();
-    var msg = document.getElementById('adm-gh-msg');
-    if(!token){ msg.style.color='#e04040'; msg.textContent='Enter a token.'; return; }
-    localStorage.setItem('underterra_gh_token', token);
-    document.getElementById('adm-gh-token').value = '';
-    msg.style.color='#4ec994'; msg.textContent='✓ Token saved!';
-    document.getElementById('adm-gh-status').textContent = 'Token saved ✓ — auto-sync enabled.';
-    setTimeout(function(){ msg.textContent=''; }, 3500);
-  };
-
-  /* Called automatically after saving a deal — updates sold.json on GitHub */
+  /* Called automatically after saving a deal — updates sold.json via the server */
   function syncSoldToGitHub(soldIds){
-    var token = localStorage.getItem('underterra_gh_token');
-    var statusEl = document.getElementById('adm-gh-status');
-    if(!token){
-      if(statusEl) statusEl.innerHTML = '⚠ <span style="color:#e08040">No GitHub token — sold status only visible on this device. Set token in Settings.</span>';
-      return;
-    }
-    if(statusEl) statusEl.textContent = '⏳ Syncing sold list to GitHub...';
-    var apiUrl = 'https://api.github.com/repos/' + GH_REPO + '/contents/' + GH_FILE;
-    /* Step 1: get current file SHA */
-    fetch(apiUrl, { headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github.v3+json' }})
-      .then(function(r){ return r.json(); })
-      .then(function(fileData){
-        var sha = fileData.sha;
-        var newContent = btoa(JSON.stringify({sold: soldIds}) + '\n');
-        /* Step 2: push updated sold.json */
-        return fetch(apiUrl, {
-          method: 'PUT',
-          headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github.v3+json', 'Content-Type':'application/json' },
-          body: JSON.stringify({ message:'Update sold inventory', content: newContent, sha: sha })
-        });
-      })
-      .then(function(r){
-        if(r.ok){
-          if(statusEl) statusEl.innerHTML = '✅ <span style="color:#4ec994">Synced! Vercel deploying (~30s) — all devices will update automatically.</span>';
-        } else {
-          if(statusEl) statusEl.innerHTML = '❌ <span style="color:#e04040">GitHub sync failed. Check token in Settings.</span>';
-        }
-      })
-      .catch(function(){
-        if(statusEl) statusEl.innerHTML = '❌ <span style="color:#e04040">Network error. Check connection.</span>';
-      });
+    var statusEl = document.getElementById('adm-inv-backup-status');
+    if(statusEl) statusEl.textContent = '⏳ Sincronizando...';
+    fetch('/api/admin-save',{
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({file:'sold', data:{sold:soldIds}})
+    }).then(function(r){
+      if(statusEl) statusEl.innerHTML = r.ok
+        ? '✅ <span style="color:#4ec994">Sincronizado. Vercel desplegando (~30s).</span>'
+        : '❌ <span style="color:#e04040">Falló la sincronización.</span>';
+    }).catch(function(){
+      if(statusEl) statusEl.innerHTML = '❌ <span style="color:#e04040">Error de red.</span>';
+    });
   }
 
-  /* ─── GitHub Inventory Backup ─── */
-  var GH_INV_FILE = 'inventory.json';
-
+  /* Pushes the full private record (costs, buyers, notes) to the server, and mirrors
+     just id+listPrice into the PUBLIC prices.json the storefront reads */
   function syncInventoryToGitHub(d){
-    var token = localStorage.getItem('underterra_gh_token');
-    if(!token) return;
-    var apiUrl = 'https://api.github.com/repos/' + GH_REPO + '/contents/' + GH_INV_FILE;
-    var adminData = {
+    var payload = {
       lastUpdated: new Date().toISOString().slice(0,10),
       inventory: d.inventory.map(function(m){
         return {id:m.id, cost:m.cost||0, status:m.status||'available',
@@ -5212,27 +5197,29 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
                 dealNotes:m.dealNotes||'', notes:m.notes||'', serial:m.serial||''};
       })
     };
-    var newContent = btoa(unescape(encodeURIComponent(JSON.stringify(adminData, null, 2) + '\n')));
-    fetch(apiUrl, { headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github.v3+json' }})
-      .then(function(r){ return r.json(); })
-      .then(function(fileData){
-        var sha = fileData.sha || null;
-        var body = { message:'Backup admin inventory', content: newContent };
-        if(sha) body.sha = sha;
-        return fetch(apiUrl, {
-          method: 'PUT',
-          headers:{ 'Authorization':'token '+token, 'Accept':'application/vnd.github.v3+json', 'Content-Type':'application/json' },
-          body: JSON.stringify(body)
-        });
+    fetch('/api/admin-save',{
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({file:'inventory', data:payload})
+    }).then(function(r){
+      var el = document.getElementById('adm-inv-backup-status');
+      if(el && r.ok){
+        el.innerHTML = '✅ <span style="color:#4ec994">Backup guardado.</span>';
+        setTimeout(function(){ el.textContent=''; }, 4000);
+      }
+    }).catch(function(){});
+
+    var pricesPayload = {
+      lastUpdated: new Date().toISOString().slice(0,10),
+      prices: d.inventory.filter(function(m){return m.listPrice;}).map(function(m){
+        return {id:m.id, listPrice:m.listPrice};
       })
-      .then(function(r){
-        var el = document.getElementById('adm-inv-backup-status');
-        if(el && r && r.ok){
-          el.innerHTML = '✅ <span style="color:#4ec994">Backup guardado en GitHub.</span>';
-          setTimeout(function(){ el.textContent=''; }, 4000);
-        }
-      })
-      .catch(function(){});
+    };
+    fetch('/api/admin-save',{
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({file:'prices', data:pricesPayload})
+    }).catch(function(){});
   }
 
   window.admBackupNow = function(){
@@ -5242,54 +5229,12 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
   };
 
   window.admRestoreFromGitHub = function(silent){
-    var token = localStorage.getItem('underterra_gh_token');
     var statusEl = document.getElementById('adm-inv-backup-status');
-    if(!token){
-      if(!silent && statusEl) statusEl.innerHTML = '⚠ <span style="color:#e08040">No hay token configurado en Settings.</span>';
-      return;
-    }
-    if(!silent && statusEl) statusEl.textContent = '⏳ Restaurando desde GitHub...';
-    fetch('/inventory.json?_='+Date.now())
-      .then(function(r){ return r.json(); })
-      .then(function(ghData){
-        if(!ghData || !Array.isArray(ghData.inventory) || !ghData.inventory.length) return;
-        var d = getData();
-        ghData.inventory.forEach(function(gh){
-          var local = d.inventory.find(function(m){ return m.id === gh.id; });
-          if(local){
-            if(gh.cost)         local.cost         = gh.cost;
-            if(gh.listPrice)    local.listPrice    = gh.listPrice;
-            if(gh.status)       local.status       = gh.status;
-            if(gh.soldPrice)    local.soldPrice    = gh.soldPrice;
-            if(gh.soldDate)     local.soldDate     = gh.soldDate;
-            if(gh.buyerName)    local.buyerName    = gh.buyerName;
-            if(gh.buyerContact) local.buyerContact = gh.buyerContact;
-            if(gh.dealNotes)    local.dealNotes    = gh.dealNotes;
-            if(gh.notes)        local.notes        = gh.notes;
-            if(gh.serial)       local.serial       = gh.serial;
-          }
-        });
-        save(d);
-        if(!silent && statusEl) statusEl.innerHTML = '✅ <span style="color:#4ec994">Datos restaurados desde GitHub ('+(ghData.lastUpdated||'?')+').</span>';
-        renderDashboard(); renderInventory(); renderSales();
-      })
-      .catch(function(){
-        if(!silent && statusEl) statusEl.innerHTML = '❌ <span style="color:#e04040">No se pudo restaurar. Verifica conexión.</span>';
-      });
-  };
-
-  /* ─── Change password ─── */
-  window.admChangePw=function(){
-    var pw=document.getElementById('adm-new-pw').value;
-    var c=document.getElementById('adm-confirm-pw').value;
-    var msg=document.getElementById('adm-pw-msg');
-    if(!pw||pw.length<6){msg.style.color='#e04040';msg.textContent='Minimum 6 characters.';return;}
-    if(pw!==c){msg.style.color='#e04040';msg.textContent='Passwords do not match.';return;}
-    localStorage.setItem(LS_PW,h(pw));
-    document.getElementById('adm-new-pw').value='';
-    document.getElementById('adm-confirm-pw').value='';
-    msg.style.color='#4ec994';msg.textContent='✓ Password updated!';
-    setTimeout(function(){msg.textContent='';},3500);
+    if(!silent && statusEl) statusEl.textContent = '⏳ Restaurando...';
+    admHydrateFromServer(function(){
+      if(!silent && statusEl) statusEl.innerHTML = '✅ <span style="color:#4ec994">Datos restaurados.</span>';
+      renderDashboard(); renderInventory(); renderSales();
+    });
   };
 
   /* ─── Reset data ─── */
@@ -5357,7 +5302,7 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
   </script>
 
   <script>
-  /* ── Apply admin-edited list prices — fetches inventory.json (works on ALL devices) ── */
+  /* ── Apply admin-edited list prices — fetches prices.json (PUBLIC, id+listPrice only) ── */
   (function(){
     function fmtPrice(n){ return '$' + Number(n||0).toLocaleString('en-US'); }
     function applyPrices(list){
@@ -5370,9 +5315,9 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
         priceEl.innerHTML = '<span>Price</span>' + fmtPrice(m.listPrice);
       });
     }
-    fetch('/inventory.json?_=' + Date.now())
+    fetch('/prices.json?_=' + Date.now())
       .then(function(r){ return r.json(); })
-      .then(function(data){ applyPrices(data && data.inventory); })
+      .then(function(data){ applyPrices(data && data.prices); })
       .catch(function(){});
   })();
   </script>
