@@ -497,14 +497,14 @@
     },
     {
       "id": "m40",
-      "cost": 0,
+      "cost": 71441.5,
       "status": "sold",
       "listPrice": 116000,
-      "soldPrice": 116000,
+      "soldPrice": 45000,
       "soldDate": "",
-      "buyerName": "",
+      "buyerName": "Viviana Lesely Moreno",
       "buyerContact": "",
-      "dealNotes": "",
+      "dealNotes": "Se perdio dinero en esta maquina",
       "notes": "",
       "serial": ""
     },
