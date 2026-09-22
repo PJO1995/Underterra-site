@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-09-21",
+  "lastUpdated": "2026-09-22",
   "inventory": [
     {
       "id": "m01",
@@ -588,14 +588,14 @@
     },
     {
       "id": "m47",
-      "cost": 0,
+      "cost": 44300,
       "status": "sold",
       "listPrice": 64000,
       "soldPrice": 64000,
-      "soldDate": "",
-      "buyerName": "",
+      "soldDate": "2026-08-03",
+      "buyerName": "Vincent Construction",
       "buyerContact": "",
-      "dealNotes": "",
+      "dealNotes": "SN:7598",
       "notes": "",
       "serial": ""
     },
