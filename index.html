@@ -4589,8 +4589,9 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
         </div>
       </div>
       <div class="adm-modal-footer">
-        <button class="adm-btn-cancel" onclick="admCloseDeal()">Cancel</button>
-        <button class="adm-btn-register" onclick="admSaveDeal()">✓ Save Deal</button>
+        <span id="adm-deal-save-status" style="font-size:0.76rem;margin-right:auto;align-self:center;"></span>
+        <button class="adm-btn-cancel" id="adm-deal-cancel-btn" onclick="admCloseDeal()">Cancel</button>
+        <button class="adm-btn-register" id="adm-deal-save-btn" onclick="admSaveDeal()">✓ Save Deal</button>
       </div>
     </div>
   </div>
@@ -5148,18 +5149,41 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
     m.dealNotes  =document.getElementById('adm-f-notes').value.trim();
     m.status     ='sold';   /* Auto-mark as sold when deal is registered */
     save(d);
+
+    /* IMPORTANT: do NOT close the modal or let the user navigate away until the
+       server confirms the write. Closing/refreshing before the GitHub sync lands
+       used to let a later admin-panel open pull stale server data and overwrite
+       the just-entered deal in localStorage. We now block the UI until synced. */
+    var saveBtn=document.getElementById('adm-deal-save-btn');
+    var cancelBtn=document.getElementById('adm-deal-cancel-btn');
+    var statusEl=document.getElementById('adm-deal-save-status');
+    if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='⏳ Guardando...'; }
+    if(cancelBtn){ cancelBtn.disabled=true; }
+    if(statusEl){ statusEl.style.color='#ffd51e'; statusEl.textContent='Guardando en el servidor — no cierres ni recargues todavía...'; }
+
     /* Sync sold list to GitHub so ALL devices (mobile/desktop) see it */
     var soldIds = d.inventory.filter(function(x){ return x.status==='sold'; }).map(function(x){ return x.id; });
-    syncSoldToGitHub(soldIds);
-    /* Backup full inventory data to GitHub */
-    syncInventoryToGitHub(d);
-    admCloseDeal();
-    /* Refresh whichever tab is visible */
-    var invTab=document.getElementById('tab-inventory');
-    var salesTab=document.getElementById('tab-sales');
-    if(invTab&&invTab.style.display!=='none') renderInventory();
-    if(salesTab&&salesTab.style.display!=='none') renderSales();
-    renderDashboard();
+
+    Promise.all([ syncSoldToGitHub(soldIds), syncInventoryToGitHub(d) ])
+      .then(function(){
+        if(statusEl){ statusEl.style.color='#4ec994'; statusEl.textContent='✅ Guardado y sincronizado.'; }
+        setTimeout(function(){
+          if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='✓ Save Deal'; }
+          if(cancelBtn){ cancelBtn.disabled=false; }
+          admCloseDeal();
+          /* Refresh whichever tab is visible */
+          var invTab=document.getElementById('tab-inventory');
+          var salesTab=document.getElementById('tab-sales');
+          if(invTab&&invTab.style.display!=='none') renderInventory();
+          if(salesTab&&salesTab.style.display!=='none') renderSales();
+          renderDashboard();
+        }, 500);
+      })
+      .catch(function(){
+        if(statusEl){ statusEl.style.color='#e04040'; statusEl.textContent='❌ No se pudo guardar en el servidor. Tus datos siguen en este formulario — intenta guardar de nuevo antes de cerrar.'; }
+        if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='↻ Reintentar guardado'; }
+        if(cancelBtn){ cancelBtn.disabled=false; }
+      });
   };
 
   /* ─── Server-side sync ─ no GitHub token ever touches the browser (see /api/admin-save) ─── */
@@ -5168,7 +5192,7 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
   function syncSoldToGitHub(soldIds){
     var statusEl = document.getElementById('adm-inv-backup-status');
     if(statusEl) statusEl.textContent = '⏳ Sincronizando...';
-    fetch('/api/admin-save',{
+    return fetch('/api/admin-save',{
       method:'POST', credentials:'include',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({file:'sold', data:{sold:soldIds}})
@@ -5176,8 +5200,10 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
       if(statusEl) statusEl.innerHTML = r.ok
         ? '✅ <span style="color:#4ec994">Sincronizado. Vercel desplegando (~30s).</span>'
         : '❌ <span style="color:#e04040">Falló la sincronización.</span>';
-    }).catch(function(){
+      if(!r.ok) throw new Error('sold-sync-failed');
+    }, function(){
       if(statusEl) statusEl.innerHTML = '❌ <span style="color:#e04040">Error de red.</span>';
+      throw new Error('sold-sync-network-error');
     });
   }
 
@@ -5194,17 +5220,22 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
                 dealNotes:m.dealNotes||'', notes:m.notes||'', serial:m.serial||''};
       })
     };
-    fetch('/api/admin-save',{
+    var p1 = fetch('/api/admin-save',{
       method:'POST', credentials:'include',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({file:'inventory', data:payload})
     }).then(function(r){
       var el = document.getElementById('adm-inv-backup-status');
-      if(el && r.ok){
-        el.innerHTML = '✅ <span style="color:#4ec994">Backup guardado.</span>';
-        setTimeout(function(){ el.textContent=''; }, 4000);
+      if(el){
+        if(r.ok){
+          el.innerHTML = '✅ <span style="color:#4ec994">Backup guardado.</span>';
+          setTimeout(function(){ el.textContent=''; }, 4000);
+        } else {
+          el.innerHTML = '❌ <span style="color:#e04040">Falló el backup.</span>';
+        }
       }
-    }).catch(function(){});
+      if(!r.ok) throw new Error('inventory-sync-failed');
+    });
 
     var pricesPayload = {
       lastUpdated: new Date().toISOString().slice(0,10),
@@ -5212,11 +5243,15 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
         return {id:m.id, listPrice:m.listPrice};
       })
     };
-    fetch('/api/admin-save',{
+    var p2 = fetch('/api/admin-save',{
       method:'POST', credentials:'include',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({file:'prices', data:pricesPayload})
-    }).catch(function(){});
+    }).then(function(r){
+      if(!r.ok) throw new Error('prices-sync-failed');
+    });
+
+    return Promise.all([p1, p2]);
   }
 
   window.admBackupNow = function(){
