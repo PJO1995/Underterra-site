@@ -5012,7 +5012,7 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
         renderInventory();
       }
       /* Sync full inventory backup on important field changes */
-      if(field==='cost'||field==='status'||field==='notes'||field==='serial'||field==='listPrice'){
+      if(field==='cost'||field==='status'||field==='notes'||field==='serial'||field==='listPrice'||field==='soldDate'){
         syncInventoryToGitHub(d);
       }
       /* Listed value on Dashboard depends on listPrice — keep it fresh */
@@ -5254,8 +5254,22 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
     var d=getData();
     var m=d.inventory.find(function(x){return x.id===_dealId;});
     if(!m) return;
+
+    var dateEl=document.getElementById('adm-f-date');
+    var statusEl=document.getElementById('adm-deal-save-status');
+    /* Defensive check: a native date field can visually show a date while the
+       browser still considers what was typed incomplete/invalid (e.g. you
+       clicked "Save Deal" a beat before the last digit registered). In that
+       case .value silently comes back '' and the date gets lost on save with
+       no warning -- this is what happened with UT-007. Catch it here instead. */
+    if(dateEl && dateEl.validity && dateEl.validity.badInput){
+      if(statusEl){ statusEl.style.color='#e04040'; statusEl.textContent='⚠️ La Fecha de Venta no quedó completa — revisa día/mes/año e intenta de nuevo.'; }
+      dateEl.focus();
+      return;
+    }
+
     m.stockNum   =document.getElementById('adm-f-stock').value.trim();
-    m.soldDate   =document.getElementById('adm-f-date').value;
+    m.soldDate   =dateEl.value;
     m.cost       =+(document.getElementById('adm-f-cost').value)||0;
     m.soldPrice  =+(document.getElementById('adm-f-sold').value)||m.listPrice;
     m.buyerName  =document.getElementById('adm-f-buyer').value.trim();
@@ -5270,7 +5284,6 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
        the just-entered deal in localStorage. We now block the UI until synced. */
     var saveBtn=document.getElementById('adm-deal-save-btn');
     var cancelBtn=document.getElementById('adm-deal-cancel-btn');
-    var statusEl=document.getElementById('adm-deal-save-status');
     if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='⏳ Guardando...'; }
     if(cancelBtn){ cancelBtn.disabled=true; }
     if(statusEl){ statusEl.style.color='#ffd51e'; statusEl.textContent='Guardando en el servidor — no cierres ni recargues todavía...'; }
@@ -5280,7 +5293,13 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
 
     Promise.all([ syncSoldToGitHub(soldIds), syncInventoryToGitHub(d) ])
       .then(function(){
-        if(statusEl){ statusEl.style.color='#4ec994'; statusEl.textContent='✅ Guardado y sincronizado.'; }
+        var noDate = !m.soldDate;
+        if(statusEl){
+          statusEl.style.color = noDate ? '#ffb020' : '#4ec994';
+          statusEl.textContent = noDate
+            ? '✅ Guardado y sincronizado — pero SIN fecha de venta. Ábrelo de nuevo y agrégala.'
+            : '✅ Guardado y sincronizado.';
+        }
         setTimeout(function(){
           if(saveBtn){ saveBtn.disabled=false; saveBtn.textContent='✓ Save Deal'; }
           if(cancelBtn){ cancelBtn.disabled=false; }
@@ -5291,7 +5310,7 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
           if(invTab&&invTab.style.display!=='none') renderInventory();
           if(salesTab&&salesTab.style.display!=='none') renderSales();
           renderDashboard();
-        }, 500);
+        }, noDate ? 2200 : 500);
       })
       .catch(function(){
         if(statusEl){ statusEl.style.color='#e04040'; statusEl.textContent='❌ No se pudo guardar en el servidor. Tus datos siguen en este formulario — intenta guardar de nuevo antes de cerrar.'; }
