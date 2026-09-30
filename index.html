@@ -4493,6 +4493,7 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
             <div class="adm-view-toggle">
               <button class="adm-vtab active" onclick="admSalesView('cards',this)">Cards</button>
               <button class="adm-vtab" onclick="admSalesView('table',this)">Table</button>
+              <button class="adm-vtab" onclick="admSalesView('date',this)">Date</button>
             </div>
             <button class="adm-btn-export" style="margin:0;" onclick="admExportCSV()">⬇ Export CSV</button>
           </div>
@@ -4521,6 +4522,29 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
               </tr>
             </thead>
             <tbody id="adm-sales-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- Date view: same as Table, grouped by month + year -->
+        <div id="adm-sales-date-wrap" class="adm-table-wrap" style="display:none;">
+          <table class="adm-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Stock #</th>
+                <th>Machine</th>
+                <th>Category</th>
+                <th>Buyer</th>
+                <th>Contact</th>
+                <th>Cost Paid</th>
+                <th>Sold Price</th>
+                <th>Profit</th>
+                <th>Margin</th>
+                <th>Sale Date</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="adm-sales-date-tbody"></tbody>
           </table>
         </div>
 
@@ -5006,6 +5030,7 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
     btn.classList.add('active');
     document.getElementById('adm-sales-cards').style.display=(v==='cards')?'grid':'none';
     document.getElementById('adm-sales-table-wrap').style.display=(v==='table')?'block':'none';
+    document.getElementById('adm-sales-date-wrap').style.display=(v==='date')?'block':'none';
   };
 
   function renderSales(){
@@ -5070,14 +5095,11 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
         +'</div>';
     }).join('');
 
-    /* ── Table view ── */
-    if(!tbody) return;
-    var totals={rev:0,cost:0,p:0};
-    tbody.innerHTML=sold.map(function(m,i){
+    /* ── Shared row renderer (used by both Table view and Date view) ── */
+    function salesRowHTML(m,i){
       var sp=m.soldPrice||m.listPrice, c=m.cost||0, p=sp-c;
       var margin=sp>0?Math.round(p/sp*100):0;
       var cls=p>0?'profit-pos':p<0?'profit-neg':'profit-zero';
-      totals.rev+=sp;totals.cost+=c;totals.p+=p;
       return '<tr>'
         +'<td style="color:#444">'+(i+1)+'</td>'
         +'<td style="color:#ffd51e;font-weight:700;font-size:0.76rem">'+(m.stockNum?escH(m.stockNum):'—')+'</td>'
@@ -5092,7 +5114,16 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
         +'<td style="color:#555">'+(m.soldDate||'—')+'</td>'
         +'<td style="color:#444;font-size:0.75rem">'+(m.dealNotes?escH(m.dealNotes):'—')+'</td>'
         +'</tr>';
-    }).join('');
+    }
+
+    /* ── Table view ── */
+    if(!tbody) return;
+    var totals={rev:0,cost:0,p:0};
+    sold.forEach(function(m){
+      var sp=m.soldPrice||m.listPrice, c=m.cost||0;
+      totals.rev+=sp;totals.cost+=c;totals.p+=(sp-c);
+    });
+    tbody.innerHTML=sold.map(function(m,i){return salesRowHTML(m,i);}).join('');
     var tpCls=totals.p>0?'profit-pos':totals.p<0?'profit-neg':'profit-zero';
     tbody.innerHTML+='<tr style="border-top:2px solid #2a2a2e;font-weight:700">'
       +'<td style="color:#666" colspan="2">TOTAL</td><td></td><td></td><td></td><td></td>'
@@ -5101,6 +5132,42 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
       +'<td class="'+tpCls+'">'+(totals.p>0?'+':'')+fmt(totals.p)+'</td>'
       +'<td></td><td></td><td></td>'
       +'</tr>';
+
+    /* ── Date view: same rows, grouped under a header per month + year ── */
+    var dateTbody=document.getElementById('adm-sales-date-tbody');
+    if(dateTbody){
+      var MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+      var groups=[], groupByKey={};
+      sold.forEach(function(m,i){
+        var key = m.soldDate ? m.soldDate.slice(0,7) : 'zzz-nodate'; /* YYYY-MM, undated sales sort last */
+        if(!groupByKey[key]){
+          groupByKey[key]={key:key, rows:[], rev:0, cost:0, p:0};
+          groups.push(groupByKey[key]);
+        }
+        var sp=m.soldPrice||m.listPrice, c=m.cost||0;
+        groupByKey[key].rows.push(salesRowHTML(m,i));
+        groupByKey[key].rev+=sp; groupByKey[key].cost+=c; groupByKey[key].p+=(sp-c);
+      });
+      dateTbody.innerHTML=groups.map(function(g){
+        var label;
+        if(g.key==='zzz-nodate'){
+          label='No Date';
+        }else{
+          var parts=g.key.split('-'), yr=parts[0], moIdx=parseInt(parts[1],10)-1;
+          label=(MONTH_NAMES[moIdx]||g.key)+' '+yr;
+        }
+        var gpCls=g.p>0?'profit-pos':g.p<0?'profit-neg':'profit-zero';
+        var header='<tr class="adm-month-group-row">'
+          +'<td colspan="12" style="background:#17171a;color:#ffd51e;font-weight:700;'
+          +'padding:0.6rem 0.7rem;border-top:2px solid #2a2a2e;">'+label
+          +'<span style="color:#777;font-weight:400;font-size:0.75rem;margin-left:0.7rem;">'
+          +g.rows.length+(g.rows.length===1?' sale':' sales')
+          +' &nbsp;·&nbsp; Revenue '+fmt(g.rev)
+          +' &nbsp;·&nbsp; Profit <span class="'+gpCls+'">'+(g.p>0?'+':'')+fmt(g.p)+'</span>'
+          +'</span></td></tr>';
+        return header+g.rows.join('');
+      }).join('');
+    }
   }
 
   /* ─── CSV Export ─── */
