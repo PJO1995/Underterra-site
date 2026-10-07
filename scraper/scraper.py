@@ -7,15 +7,24 @@ Run: python3 scraper/scraper.py
 
 import os
 import re
+import shutil
 import sys
 import time
 from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
+from PIL import Image, ImageOps
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 DEALER_BASE_URL = "https://www.machinerytrader.com/listings/search?DSCompanyID=101734"
 
 INDEX_FILE = "index.html"
+
+# Carpeta donde Paul puede dejar SUS fotos originales (antes de subirlas a MT) para que
+# el scraper las use en vez de las fotos reducidas que MachineryTrader publica. Ver
+# ask_user_for_pending_photos() / process_local_photos() mas abajo.
+PENDING_IMGS_DIR = "underterra-imgs/pending"
+MAX_PHOTO_WIDTH = 1600   # mucho mas nitido que los 614px de MT, sin pesar demasiado
+JPEG_QUALITY = 85
 
 # ── Helpers ─────────────────────────────────────────────────────────────────────
 
@@ -68,6 +77,92 @@ def friendly_category(category_raw):
 def listing_id_from_url(url):
     m = re.search(r'/(\d{8,})', url)
     return m.group(1) if m else ""
+
+
+def list_pending_photo_folders():
+    """Subcarpetas dentro de underterra-imgs/pending/ que tengan al menos una foto."""
+    if not os.path.isdir(PENDING_IMGS_DIR):
+        return []
+    folders = []
+    for name in sorted(os.listdir(PENDING_IMGS_DIR)):
+        if name.startswith("_"):
+            continue
+        full = os.path.join(PENDING_IMGS_DIR, name)
+        if os.path.isdir(full):
+            imgs = [f for f in os.listdir(full)
+                    if f.lower().endswith((".jpg", ".jpeg", ".png", ".heic", ".heif"))]
+            if imgs:
+                folders.append((name, full, len(imgs)))
+    return folders
+
+
+def ask_user_for_pending_photos(listing_title):
+    """Si hay carpetas de fotos pendientes, le pregunta a Paul en la Terminal si alguna
+    corresponde a esta maquina nueva. Devuelve la carpeta elegida, o None."""
+    folders = list_pending_photo_folders()
+    if not folders:
+        return None
+    print()
+    print(f"  \U0001F4F7 Maquina nueva: {listing_title}")
+    print("     Encontre estas carpetas de fotos pendientes en underterra-imgs/pending/:")
+    for i, (name, _, count) in enumerate(folders, 1):
+        print(f"     {i}) {name}  ({count} fotos)")
+    print("     Si ninguna es esta maquina, escribe \"n\" y seguimos con las fotos de MachineryTrader.")
+    while True:
+        try:
+            choice = input("     \u00bfCual corresponde a esta maquina? (numero o \"n\"): ").strip().lower()
+        except EOFError:
+            return None
+        if choice in ("n", "no", ""):
+            return None
+        if choice.isdigit() and 1 <= int(choice) <= len(folders):
+            return folders[int(choice) - 1][1]
+        print("     No entendi -- escribe el numero de la carpeta o \"n\".")
+
+
+def process_local_photos(folder_path, stock_num):
+    """Reduce/compacta las fotos originales de Paul a un tamano razonable para la web
+    y las guarda de forma permanente en underterra-imgs/<stock>/. Devuelve la lista de
+    rutas relativas (para usar en <img src=...> en vez de las URLs de MachineryTrader)."""
+    dest_dir = os.path.join("underterra-imgs", stock_num.lower())
+    os.makedirs(dest_dir, exist_ok=True)
+
+    src_files = sorted(
+        f for f in os.listdir(folder_path)
+        if f.lower().endswith((".jpg", ".jpeg", ".png", ".heic", ".heif"))
+    )
+    rel_paths = []
+    for i, fname in enumerate(src_files):
+        src = os.path.join(folder_path, fname)
+        try:
+            img = Image.open(src)
+            img = ImageOps.exif_transpose(img)  # respeta la orientacion de fotos de celular
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+            if img.width > MAX_PHOTO_WIDTH:
+                ratio = MAX_PHOTO_WIDTH / float(img.width)
+                img = img.resize((MAX_PHOTO_WIDTH, int(img.height * ratio)), Image.LANCZOS)
+            out_name = f"{stock_num.lower()}-{i + 1}.jpg"
+            out_path = os.path.join(dest_dir, out_name)
+            img.save(out_path, "JPEG", quality=JPEG_QUALITY, optimize=True)
+            rel_paths.append(f"underterra-imgs/{stock_num.lower()}/{out_name}")
+        except Exception as e:
+            if fname.lower().endswith((".heic", ".heif")):
+                print(f"     \u26a0 {fname}: este Mac no puede abrir fotos .HEIC todavia. "
+                      f"Convierte esta foto a JPG primero (en la app Fotos: Archivo > Exportar > "
+                      f"Exportar 1 foto... > formato JPEG) y vuelve a correr sync.sh.")
+            else:
+                print(f"     \u26a0 No pude procesar {fname}: {e}")
+
+    # Ya se copiaron y procesaron -- borramos los originales de pending/ para no
+    # volver a preguntar por esta carpeta ni dejar copias pesadas sin comprimir
+    # dando vueltas en el repo. Las copias comprimidas quedan en underterra-imgs/<stock>/.
+    try:
+        shutil.rmtree(folder_path)
+    except Exception:
+        pass
+
+    return rel_paths
 
 
 def fetch_listing_detail(listing_url):
@@ -377,6 +472,15 @@ def build_machine_card(listing, machine_id, stock_num):
     # Prefer detail-page hours over search-page hours (more reliable)
     if hours_detail:
         hours = hours_detail
+
+    # Si Paul ya dejo SUS fotos originales (mejor calidad que las de MT) en
+    # underterra-imgs/pending/, usarlas en vez de las fotos reducidas de MachineryTrader.
+    pending_folder = ask_user_for_pending_photos(title_full)
+    if pending_folder:
+        local_imgs = process_local_photos(pending_folder, stock_num)
+        if local_imgs:
+            img_list = local_imgs
+            print(f"    \u2192 usando {len(local_imgs)} foto(s) propia(s) (en vez de las de MachineryTrader)")
 
     if img_list:
         imgs_html = "\n".join(
