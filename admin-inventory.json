@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-10-06",
+  "lastUpdated": "2026-10-08",
   "inventory": [
     {
       "id": "m01",
@@ -679,14 +679,14 @@
     },
     {
       "id": "m54",
-      "cost": 0,
-      "status": "available",
+      "cost": 33990,
+      "status": "sold",
       "listPrice": 49000,
-      "soldPrice": 49000,
-      "soldDate": "",
-      "buyerName": "",
-      "buyerContact": "",
-      "dealNotes": "",
+      "soldPrice": 47400,
+      "soldDate": "2026-10-06",
+      "buyerName": "MR. Holland, / Jubilee farms inc.",
+      "buyerContact": "ihjubileefarmsinc@live.com",
+      "dealNotes": "se vendio en 49k pero nosotros cubrimos el flete por 1600.\ntotal 47400",
       "notes": "",
       "serial": ""
     }
