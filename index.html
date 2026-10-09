@@ -4441,7 +4441,10 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
       <!-- DASHBOARD TAB -->
       <div id="tab-dashboard">
         <div class="adm-cards" id="adm-cards"></div>
-        <div class="adm-section-title">Recent Sales</div>
+        <div class="adm-section-title" style="display:flex;justify-content:space-between;align-items:baseline">
+          <span>Recent Sales</span>
+          <a href="#" onclick="admGoToSales();return false;" style="color:#ffd51e;font-size:0.68rem;letter-spacing:0.5px;text-transform:none;border-bottom:none;text-decoration:none;opacity:0.85">Ver todas &rarr;</a>
+        </div>
         <div id="adm-recent-sales"></div>
         <button class="adm-logout-btn adm-logout-corner" onclick="admLogout()">⏻ Exit Admin</button>
       </div>
@@ -4873,6 +4876,14 @@ kbd.adm-kbd{background:#1c1c1e;border:1px solid #333;border-radius:3px;padding:0
     if(name==='dashboard') renderDashboard();
     if(name==='inventory') renderInventory();
     if(name==='sales')     renderSales();
+  };
+
+  /* Jump to Sales Log from the "Ver todas ->" link on the Dashboard's
+     Recent Sales widget -- reuses admTab so the topbar nav button lights
+     up correctly too, instead of just swapping the visible panel. */
+  window.admGoToSales=function(){
+    var btn=document.querySelector(".adm-tab[onclick*=\"admTab('sales'\"]");
+    if(btn) admTab('sales',btn);
   };
 
   /* ─── Format currency ─── */
