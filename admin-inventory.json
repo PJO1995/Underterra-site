@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-10-08",
+  "lastUpdated": "2026-10-09",
   "inventory": [
     {
       "id": "m01",
@@ -345,7 +345,7 @@
       "status": "sold",
       "listPrice": 112000,
       "soldPrice": 112000,
-      "soldDate": "",
+      "soldDate": "2026-10-06",
       "buyerName": "Comercializadora de Insumos y equipos SA de CV",
       "buyerContact": "+52 878 133 6292",
       "dealNotes": "",
@@ -686,7 +686,7 @@
       "soldDate": "2026-10-06",
       "buyerName": "MR. Holland, / Jubilee farms inc.",
       "buyerContact": "ihjubileefarmsinc@live.com",
-      "dealNotes": "se vendio en 49k pero nosotros cubrimos el flete por 1600.\ntotal 47400",
+      "dealNotes": "se vendio en 49k pero nosotros cubrimos el flete por 1600.\ntotal 47400\nConfirmar el S/N con esta maquina",
       "notes": "",
       "serial": ""
     }
