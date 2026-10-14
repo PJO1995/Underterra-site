@@ -26,7 +26,7 @@ python3 scraper/scraper.py
 
 echo ""
 echo "📤 Subiendo cambios al sitio..."
-git add index.html
+git add index.html underterra-imgs/
 
 # Si YA hay commits locales pendientes de subir de una corrida anterior
 # (por ejemplo, porque el push de la última vez falló y no nos dimos cuenta),
