@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-10-09",
+  "lastUpdated": "2026-10-14",
   "prices": [
     {
       "id": "m01",
@@ -212,6 +212,10 @@
     {
       "id": "m54",
       "listPrice": 49000
+    },
+    {
+      "id": "m55",
+      "listPrice": 53000
     }
   ]
 }
