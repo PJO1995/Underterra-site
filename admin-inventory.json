@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-10-09",
+  "lastUpdated": "2026-10-14",
   "inventory": [
     {
       "id": "m01",
@@ -445,14 +445,14 @@
     },
     {
       "id": "m36",
-      "cost": 0,
-      "status": "available",
+      "cost": 33053.42,
+      "status": "sold",
       "listPrice": 44000,
-      "soldPrice": 44000,
-      "soldDate": "",
-      "buyerName": "",
-      "buyerContact": "",
-      "dealNotes": "",
+      "soldPrice": 42000,
+      "soldDate": "2026-10-12",
+      "buyerName": "J. Guadalupe Aguilera",
+      "buyerContact": "316 409 0936",
+      "dealNotes": "Se fue a Mexico.\nS/N 9487",
       "notes": "",
       "serial": "9487"
     },
@@ -687,6 +687,19 @@
       "buyerName": "MR. Holland, / Jubilee farms inc.",
       "buyerContact": "ihjubileefarmsinc@live.com",
       "dealNotes": "se vendio en 49k pero nosotros cubrimos el flete por 1600.\ntotal 47400\nS/N 8738",
+      "notes": "",
+      "serial": ""
+    },
+    {
+      "id": "m55",
+      "cost": 0,
+      "status": "available",
+      "listPrice": 53000,
+      "soldPrice": 53000,
+      "soldDate": "",
+      "buyerName": "",
+      "buyerContact": "",
+      "dealNotes": "",
       "notes": "",
       "serial": ""
     }
