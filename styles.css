@@ -54,6 +54,7 @@ body.ut {
 .ut-util { background: var(--ink); color: var(--on-dark-2); font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.04em; border-bottom: 1px solid var(--line-dark); }
 .ut-util .ut-wrap { display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; padding-top: 10px; padding-bottom: 10px; }
 .ut-util a { color: var(--accent); text-decoration: none; }
+.ut-menu-meta a { text-decoration: none; }
 
 .ut-header { background: var(--ink); color: var(--on-dark); position: sticky; top: 0; z-index: 900; }
 .ut-header .ut-wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px 32px; padding-top: 16px; padding-bottom: 16px; }
@@ -63,7 +64,7 @@ body.ut {
 .ut-nav a:hover { color: var(--accent); }
 .ut-nav a[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
 .ut-nav .ut-btn { padding: 12px 20px; min-height: 44px; font-size: 13px; border-bottom-width: 2px; }
-.ut-nav .ut-btn:hover { color: var(--ink); }
+.ut-nav a.ut-btn, .ut-nav a.ut-btn:hover { color: var(--ink); border-bottom-color: var(--accent); }
 .ut-header-actions { display: none; align-items: center; gap: 4px; }
 .ut-icon-btn { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: transparent; border: 0; color: var(--on-dark); cursor: pointer; }
 .ut-icon-btn.accent { color: var(--accent); }

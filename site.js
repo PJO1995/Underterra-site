@@ -93,7 +93,7 @@
         form.reset();
         btn.style.display = 'none';
       }).catch(function () {
-        box.textContent = '✗ Something went wrong. Please email us at ap@underterradelrio.com or call (830) 734-9696.';
+        box.textContent = '✗ Something went wrong. Please email us at ap@underterradelrio.com or call sales (830) 422-5062 or the office (830) 488-5594.';
         box.style.display = 'block';
         btn.textContent = label;
         btn.disabled = false;
