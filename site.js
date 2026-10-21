@@ -15,14 +15,51 @@
     });
   }
 
-  /* ── Hero background video (loads after the page, skipped for reduced motion / data saver) ── */
-  var hv = document.querySelector('.ut-hero-video');
-  if (hv) {
+  /* ── Hero slideshow: 3 clips + 3 photos, crossfading. Each item loads only right before it shows. ── */
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.ut-hero-media .ut-slide'));
+  if (slides.length) {
     var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     var save = navigator.connection && navigator.connection.saveData;
+    var mobile = window.innerWidth <= 900;
+    var PHOTO_MS = 5000, MAX_VIDEO_MS = 12000;
+    var cur = 0, timer = null;
+    var prep = function (el) {
+      if (el.tagName === 'VIDEO') {
+        if (!el.getAttribute('src')) { el.src = el.getAttribute(mobile ? 'data-src-mobile' : 'data-src'); el.preload = 'auto'; }
+      } else if (!el.style.backgroundImage) {
+        el.style.backgroundImage = 'url(' + el.getAttribute(mobile ? 'data-img-mobile' : 'data-img') + ')';
+      }
+    };
+    var next = function () {
+      clearTimeout(timer);
+      var from = slides[cur];
+      cur = (cur + 1) % slides.length;
+      show(cur, from);
+    };
+    var show = function (i, from) {
+      var el = slides[i];
+      prep(el);
+      prep(slides[(i + 1) % slides.length]);            /* warm up the following one */
+      el.classList.add('is-on');
+      if (from && from !== el) setTimeout(function () { from.classList.remove('is-on'); if (from.tagName === 'VIDEO') from.pause(); }, 1100);
+      if (el.tagName === 'VIDEO') {
+        try { el.currentTime = 0; } catch (e) {}
+        el.onended = next;
+        var p = el.play();
+        if (p && p.catch) p.catch(function () { if (slides[cur] === el) { clearTimeout(timer); timer = setTimeout(next, PHOTO_MS); } });  /* autoplay blocked: treat as photo */
+        timer = setTimeout(next, MAX_VIDEO_MS);
+      } else {
+        timer = setTimeout(next, PHOTO_MS);
+      }
+    };
     if (!reduce && !save) {
-      hv.src = (window.innerWidth <= 900 ? hv.getAttribute('data-src-mobile') : hv.getAttribute('data-src'));
-      var p = hv.play(); if (p && p.catch) p.catch(function () {});
+      show(0, null);
+      document.addEventListener('visibilitychange', function () {
+        var v = slides[cur];
+        if (document.hidden) { clearTimeout(timer); if (v.tagName === 'VIDEO') v.pause(); }
+        else if (v.tagName === 'VIDEO') { var p = v.play(); if (p && p.catch) p.catch(function () {}); timer = setTimeout(next, MAX_VIDEO_MS); }
+        else timer = setTimeout(next, PHOTO_MS);
+      });
     }
   }
 

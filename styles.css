@@ -282,3 +282,11 @@ html[lang="es"] .ut-tile .name { font-size: 19px; }
   .ut-shop .ut-tile { box-shadow: 4px 4px 0 var(--ink); }
 }
 @media (prefers-reduced-motion: reduce) { .ut-hero-video { display: none; } }
+
+/* hero slideshow layers */
+.ut-hero-media { position: absolute; inset: 0; z-index: 0; background: var(--ink); }
+.ut-slide { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background-size: cover; background-position: center; opacity: 0; transition: opacity 1s ease; }
+.ut-slide.is-on { opacity: 1; }
+.ut-slide:first-child { background-image: url('underterra-imgs/hero-bg-poster.jpg'); }
+video.ut-slide::-webkit-media-controls, video.ut-slide::-webkit-media-controls-start-playback-button, video.ut-slide::-webkit-media-controls-panel { display: none !important; -webkit-appearance: none; }
+@media (prefers-reduced-motion: reduce) { .ut-slide { transition: none; } }
