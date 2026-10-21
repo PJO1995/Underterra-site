@@ -37,7 +37,8 @@
     'Our yard sits on the U.S.–Mexico border in Del Rio, TX. With ISN Customs Broker International, a licensed brokerage specializing in heavy equipment exports, we handle the whole process — customs paperwork, border clearance and freight — to Mexico, Central and South America.': 'Nuestro patio está en la frontera México–EE. UU., en Del Rio, TX. Con ISN Customs Broker International, agencia aduanal con licencia especializada en exportación de maquinaria pesada, nos encargamos de todo — trámites aduanales, cruce fronterizo y flete — a México, Centro y Sudamérica.',
     'How export works →': 'Cómo funciona la exportación →', 'In partnership with': 'En alianza con',
     'Customs documentation': 'Documentación aduanal', 'Border clearance': 'Cruce fronterizo', 'Freight coordination': 'Coordinación de flete', 'Final delivery — MX · CA · SA': 'Entrega final — MX · CA · SA',
-    'Let’s find your next machine.': 'Encontremos tu próxima máquina.', 'Request a Quote →': 'Pedir cotización →', 'Request a Quote': 'Pedir cotización',
+    'Let’s find your next machine.': 'Encontremos tu próxima máquina.', 'Request a Quote →': 'Pedir cotización →', 'Request a Quote': 'Pedir cotización', 'Browse Equipment ↓': 'Ver equipos ↓', 'Shop by machine': 'Busca por máquina', 'Pick what you need': 'Elige lo que necesitas',
+    'Inspected machines from CAT, Deere, Case and Komatsu — ready to work, priced straight.': 'Máquinas revisadas de CAT, Deere, Case y Komatsu — listas para trabajar, a precio claro.',
 
     /* about */
     'Who we are': 'Quiénes somos', 'Trusted': 'Distribuidores', 'equipment': 'de equipo', 'dealers.': 'de confianza.',

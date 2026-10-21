@@ -15,6 +15,17 @@
     });
   }
 
+  /* ── Hero background video (loads after the page, skipped for reduced motion / data saver) ── */
+  var hv = document.querySelector('.ut-hero-video');
+  if (hv) {
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var save = navigator.connection && navigator.connection.saveData;
+    if (!reduce && !save) {
+      hv.src = (window.innerWidth <= 900 ? hv.getAttribute('data-src-mobile') : hv.getAttribute('data-src'));
+      var p = hv.play(); if (p && p.catch) p.catch(function () {});
+    }
+  }
+
   /* ── Live category counts + sold check (home page) ─────── */
   var countEls = document.querySelectorAll('[data-ut-count]');
   var featured = document.querySelectorAll('[data-ut-featured]');

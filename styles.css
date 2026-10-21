@@ -255,3 +255,30 @@ body.ut {
 .ut-tile .row > .count { flex: none; }
 html[lang="es"] .ut-tile .name { font-size: 19px; }
 @media (max-width: 900px) { html[lang="es"] .ut-tile .name { font-size: 15px; } }
+
+/* ── Hero v2: full-bleed photo/video, tiles moved below ───── */
+.ut-hero--video { position: relative; overflow: hidden; min-height: calc(100vh - 110px); min-height: calc(100svh - 110px); display: flex; align-items: flex-end;
+  background-image: linear-gradient(180deg, rgba(17,17,16,0.55) 0%, rgba(17,17,16,0.15) 38%, rgba(17,17,16,0.35) 62%, rgba(17,17,16,0.88) 100%), url('underterra-imgs/hero-bg-poster.jpg'); background-position: center; }
+.ut-hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+.ut-hero--video::after { content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(17,17,16,0.55) 0%, rgba(17,17,16,0.12) 38%, rgba(17,17,16,0.35) 62%, rgba(17,17,16,0.9) 100%); }
+.ut-hero--video .ut-wrap { position: relative; z-index: 2; width: 100%; padding-top: 140px; padding-bottom: 72px; }
+.ut-hero--video h1 { text-shadow: 0 2px 24px rgba(0,0,0,0.35); }
+.ut-hero-cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 8px; }
+
+.ut-shop { background: var(--concrete); }
+.ut-shop .ut-wrap { padding-top: 56px; }
+.ut-shop .ut-tiles { margin-top: 0; padding: 0 8px 8px 0; gap: 24px; }
+.ut-shop .ut-tile { background: var(--paper); border: 2px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); }
+.ut-shop .ut-tile:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--ink); }
+.ut-shop .ut-tile.all { background: var(--accent); }
+
+@media (max-width: 900px) {
+  .ut-hero--video { min-height: calc(100svh - 64px - 60px); }
+  .ut-hero--video .ut-wrap { padding-top: 96px; padding-bottom: 40px; }
+  .ut-hero-cta { flex-direction: column; width: 100%; }
+  .ut-hero-cta .ut-btn { width: 100%; }
+  .ut-shop .ut-wrap { padding-top: 40px; }
+  .ut-shop .ut-tiles { gap: 14px; padding: 0 6px 6px 0; }
+  .ut-shop .ut-tile { box-shadow: 4px 4px 0 var(--ink); }
+}
+@media (prefers-reduced-motion: reduce) { .ut-hero-video { display: none; } }
