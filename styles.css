@@ -236,3 +236,22 @@ body.ut {
   .ut-actionbar a + a { background: var(--accent); border-left: 2px solid var(--ink); }
   body.ut { padding-bottom: 60px; }
 }
+
+/* ── Language switch ─────────────────────────────────────── */
+.ut-se-habla { color: var(--accent); font-weight: 600; }
+.ut-lang { display: inline-flex; border: 2px solid var(--accent); background: transparent; }
+.ut-lang button { font-family: var(--f-sans); font-weight: 800; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--on-dark); background: transparent; border: 0; padding: 0 14px; min-height: 40px; cursor: pointer; }
+.ut-lang button + button { border-left: 2px solid var(--accent); }
+.ut-lang button.is-active { background: var(--accent); color: var(--ink); }
+.ut-lang button:not(.is-active):hover { background: rgba(255,213,30,0.15); }
+.ut-lang .short { display: none; }
+.ut-lang.compact .full { display: none; }
+.ut-lang.compact .short { display: inline; }
+.ut-lang.compact button { padding: 0 10px; min-height: 38px; font-size: 13px; }
+.ut-lang.big { display: flex; margin: 12px 0 4px; }
+.ut-lang.big button { flex: 1; min-height: 52px; font-size: 16px; }
+@media (max-width: 900px) { .ut-header-actions .ut-lang { margin-right: 4px; } }
+.ut-tile .row > .name { min-width: 0; overflow-wrap: anywhere; hyphens: auto; }
+.ut-tile .row > .count { flex: none; }
+html[lang="es"] .ut-tile .name { font-size: 19px; }
+@media (max-width: 900px) { html[lang="es"] .ut-tile .name { font-size: 15px; } }

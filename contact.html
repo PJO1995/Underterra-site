@@ -18,15 +18,17 @@
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="ut">
-<div class="ut-util"><div class="ut-wrap"><span>3221 E HIGHWAY 90 · DEL RIO, TX 78840</span><span>SALES <a href="tel:+18304225062">(830) 422-5062</a> · OFFICE <a href="tel:+18304885594">(830) 488-5594</a> · MON–FRI 8–6 · SAT 9–2 CST</span></div></div>
+<div class="ut-util"><div class="ut-wrap"><span><b class="ut-se-habla" data-no-i18n>SE HABLA ESPAÑOL</b> · 3221 E HIGHWAY 90 · DEL RIO, TX 78840</span><span>SALES <a href="tel:+18304225062">(830) 422-5062</a> · OFFICE <a href="tel:+18304885594">(830) 488-5594</a> · MON–FRI 8–6 · SAT 9–2 CST</span></div></div>
 <header class="ut-header">
   <div class="ut-wrap">
     <a class="ut-logo" href="/" aria-label="Underterra home"><img src="/underterra-imgs/underterra-logo-wide.png" alt="Underterra" width="1000" height="159"></a>
     <nav class="ut-nav" aria-label="Main">
       <a href="/">Home</a><a href="/inventory">Inventory</a><a href="/about">About</a><a href="/export">Export to LatAm</a><a href="/contact" aria-current="page">Contact</a>
+      <div class="ut-lang" role="group" aria-label="Language / Idioma" data-no-i18n><button type="button" data-lang="en" aria-pressed="true"><span class="full">English</span><span class="short">EN</span></button><button type="button" data-lang="es" aria-pressed="false"><span class="full">Español</span><span class="short">ES</span></button></div>
       <a class="ut-btn ut-btn-accent" href="/contact">Get a Quote</a>
     </nav>
     <div class="ut-header-actions">
+      <div class="ut-lang compact" role="group" aria-label="Language / Idioma" data-no-i18n><button type="button" data-lang="en" aria-pressed="true"><span class="full">English</span><span class="short">EN</span></button><button type="button" data-lang="es" aria-pressed="false"><span class="full">Español</span><span class="short">ES</span></button></div>
       <a class="ut-icon-btn accent" href="tel:+18304225062" aria-label="Call sales (830) 422-5062"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg></a>
       <button class="ut-icon-btn" type="button" data-ut-menu-toggle aria-label="Open menu" aria-expanded="false" aria-controls="ut-mobile-menu">
         <svg class="ico-open" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
@@ -36,6 +38,7 @@
   </div>
 </header>
 <div class="ut-mobile-menu" id="ut-mobile-menu">
+  <div class="ut-lang big" role="group" aria-label="Language / Idioma" data-no-i18n><button type="button" data-lang="en">English</button><button type="button" data-lang="es">Español</button></div>
   <nav aria-label="Mobile"><a href="/"><span>Home</span><span>01</span></a><a href="/inventory"><span>Inventory</span><span>02</span></a><a href="/about"><span>About</span><span>03</span></a><a href="/export"><span>Export to LatAm</span><span>04</span></a><a href="/contact" aria-current="page"><span>Contact</span><span>05</span></a></nav>
   <div class="ut-menu-actions">
     <a class="ut-btn ut-btn-accent" href="/contact">Get a Quote →</a>
@@ -86,6 +89,6 @@
   <div class="ut-wrap legal"><span>© 2026 UNDERTERRA LLC. ALL RIGHTS RESERVED.</span><span>DEL RIO, TX · TRUSTED USED CONSTRUCTION MACHINERY</span></div>
 </footer>
 <div class="ut-actionbar"><a href="tel:+18304225062">Call</a><a href="mailto:ap@underterradelrio.com">Email</a></div>
-<script src="/site.js" defer></script>
+<script src="/site.js" defer></script><script src="/i18n.js" defer></script>
 </body>
 </html>
