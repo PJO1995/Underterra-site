@@ -1,3 +1,9 @@
 {
-  "version": 2
+  "version": 2,
+  "cleanUrls": true,
+  "redirects": [
+    { "source": "/", "has": [{ "type": "query", "key": "type" }], "destination": "/inventory", "permanent": false },
+    { "source": "/", "has": [{ "type": "query", "key": "brand" }], "destination": "/inventory", "permanent": false },
+    { "source": "/", "has": [{ "type": "query", "key": "machine" }], "destination": "/inventory", "permanent": false }
+  ]
 }

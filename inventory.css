@@ -1,0 +1,66 @@
+/* Underterra — inventory page restyle (2026 redesign).
+   Only restyles the existing catalog markup; card HTML / data-* stay untouched
+   so the scraper, admin panel and filters keep working. */
+body.ut { background: var(--concrete); color: var(--ink); font-family: var(--f-sans); }
+
+.ut .catalog { background: var(--concrete); max-width: var(--max); margin: 0 auto; padding: 32px 24px 96px; }
+.ut .catalog-header { display: flex; flex-direction: column; align-items: stretch; gap: 16px; margin-bottom: 28px; background: var(--paper); border: 2px solid var(--ink); padding: 20px; }
+.ut .catalog-header > * { min-width: 0; max-width: 100%; }
+.ut .catalog-header .section-tag,
+.ut .catalog-header .section-title { display: none; }
+.ut .catalog-count { font-family: var(--f-mono); font-size: 13px; color: var(--body); letter-spacing: 0.02em; margin: 0; }
+
+.ut .filter-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.ut .filter-tabs-brand { border-top: 1px solid var(--rule-soft); padding-top: 16px; }
+.ut .filter-btn { font-family: var(--f-sans); font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; background: var(--paper); color: var(--ink); border: 2px solid var(--rule); border-radius: 0; padding: 10px 14px; min-height: 44px; min-width: 0; box-shadow: none; transform: none; }
+.ut .filter-btn:hover { border-color: var(--ink); background: var(--paper); color: var(--ink); transform: none; }
+.ut .filter-btn.active { background: var(--ink); color: var(--on-dark); border-color: var(--ink); }
+.ut .filter-btn-brand { font-weight: 700; }
+.ut .filter-btn-brand[style] { border-width: 2px; }
+.ut .filter-btn-brand[style]:hover { transform: none; box-shadow: none; filter: brightness(1.1); }
+.ut .filter-btn-brand[style].active { transform: none; outline: none; filter: none; box-shadow: 4px 4px 0 var(--ink); }
+.ut .filter-btn-brand:not([style]).active { background: var(--ink); color: var(--on-dark); border-color: var(--ink); box-shadow: none; transform: none; }
+
+.ut .catalog-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 36px 32px; padding: 0 8px 8px 0; }
+.ut .machine-card { background: var(--paper); border: 2px solid var(--ink); border-radius: 0; box-shadow: 8px 8px 0 var(--ink); transition: transform .15s, box-shadow .15s; }
+.ut .machine-card:hover { border-color: var(--ink); transform: translate(-3px, -3px); box-shadow: 11px 11px 0 var(--ink); }
+.ut .machine-img { background: var(--rule-soft); border-bottom: 2px solid var(--ink); }
+.ut .machine-card:hover .carousel-img.active { transform: none; }
+.ut .carousel-counter { border-radius: 0; background: rgba(17,17,16,0.85); font-family: var(--f-mono); font-size: 11px; letter-spacing: 0; }
+.ut .mc-btn, .ut .carousel-btn { width: 36px; height: 36px; border-radius: 0; background: rgba(17,17,16,0.8); }
+.ut .machine-img-label { border-radius: 0; font-family: var(--f-mono); letter-spacing: 0.06em; }
+.ut .machine-brand { color: rgba(255,255,255,0.7); font-family: var(--f-mono); }
+.ut .machine-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.ut .machine-stock { font-family: var(--f-mono); color: var(--muted); letter-spacing: 0.04em; margin: 0; }
+.ut .machine-category { font-family: var(--f-mono); font-size: 12px; letter-spacing: 0.04em; color: var(--muted); margin: 0; }
+.ut .machine-name { font-family: var(--f-sans); font-weight: 900; font-stretch: 75%; font-size: 30px; line-height: 1; letter-spacing: 0; color: var(--ink); margin: 0; }
+.ut .machine-specs { gap: 6px; margin: 0; padding-bottom: 14px; border-bottom: 1px solid var(--rule-soft); }
+.ut .spec { background: var(--concrete); color: var(--ink); font-size: 13px; font-weight: 700; padding: 6px 10px; }
+.ut .spec-dot { display: none; }
+.ut .machine-footer { gap: 8px; align-items: center; margin-top: 2px; }
+.ut .machine-price { font-family: var(--f-sans); font-weight: 900; font-stretch: 75%; font-size: 28px; color: var(--ink); letter-spacing: 0; }
+.ut .machine-price span { font-family: var(--f-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.06em; font-weight: 400; }
+.ut .quote-btn { background: var(--ink); color: var(--on-dark); border: 2px solid var(--ink); border-radius: 0; font-family: var(--f-sans); font-weight: 800; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; padding: 12px 14px; min-height: 44px; }
+.ut .quote-btn:hover { background: var(--accent); color: var(--ink); border-color: var(--ink); }
+.ut .mt-btn { border: 2px solid var(--ink); color: var(--ink); border-radius: 0; background: transparent; font-family: var(--f-mono); min-height: 44px; padding: 0 10px; }
+.ut .mt-btn:hover { background: var(--ink); color: var(--on-dark); }
+
+@media (max-width: 900px) {
+  .ut .catalog { padding: 0 0 48px; }
+  .ut .catalog-header { position: sticky; top: 64px; z-index: 50; border-width: 0 0 2px; padding: 12px 0 10px; gap: 10px; margin-bottom: 16px; background: var(--concrete); }
+  .ut .catalog-count { padding: 0 16px; font-size: 12px; order: 3; }
+  .ut .filter-tabs { flex-wrap: nowrap; overflow-x: auto; padding: 0 16px; scrollbar-width: none; }
+  .ut .filter-tabs::-webkit-scrollbar { display: none; }
+  .ut .filter-btn { flex: none; white-space: nowrap; }
+  .ut .filter-tabs-brand { border-top: 0; padding-top: 0; }
+  .ut .catalog-grid { padding: 0 22px 6px 16px; gap: 28px; }
+  .ut .machine-card { box-shadow: 6px 6px 0 var(--ink); }
+}
+
+/* card footer: price on its own row, actions below */
+.ut .catalog-grid { align-items: stretch; }
+.ut .machine-card { display: flex; flex-direction: column; }
+.ut .machine-body { flex-grow: 1; }
+.ut .machine-footer { flex-wrap: wrap; margin-top: auto; }
+.ut .machine-price { flex-basis: 100%; display: flex; flex-direction: column; gap: 2px; }
+.ut .quote-btn { flex: 1 1 auto; }
