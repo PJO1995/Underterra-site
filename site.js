@@ -17,6 +17,8 @@
 
   /* ── Hero slideshow: 3 clips + 3 photos, crossfading. Each item loads only right before it shows. ── */
   var slides = Array.prototype.slice.call(document.querySelectorAll('.ut-hero-media .ut-slide'));
+  /* phones: videos only (2 clips); desktop: 2 clips + 3 photos */
+  if (window.innerWidth <= 900) slides = slides.filter(function (el) { return el.getAttribute('data-only') !== 'desktop'; });
   if (slides.length) {
     var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     var save = navigator.connection && navigator.connection.saveData;
@@ -27,7 +29,7 @@
       if (el.tagName === 'VIDEO') {
         if (!el.getAttribute('src')) { el.src = el.getAttribute(mobile ? 'data-src-mobile' : 'data-src'); el.preload = 'auto'; }
       } else if (!el.style.backgroundImage) {
-        el.style.backgroundImage = 'url(' + el.getAttribute(mobile ? 'data-img-mobile' : 'data-img') + ')';
+        el.style.backgroundImage = 'url(' + (el.getAttribute(mobile ? 'data-img-mobile' : 'data-img') || el.getAttribute('data-img')) + ')';
       }
     };
     var next = function () {
