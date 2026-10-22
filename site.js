@@ -17,8 +17,9 @@
 
   /* ── Hero slideshow: 3 clips + 3 photos, crossfading. Each item loads only right before it shows. ── */
   var slides = Array.prototype.slice.call(document.querySelectorAll('.ut-hero-media .ut-slide'));
-  /* phones: videos only (2 clips); desktop: 2 clips + 3 photos */
-  if (window.innerWidth <= 900) slides = slides.filter(function (el) { return el.getAttribute('data-only') !== 'desktop'; });
+  /* phones: videos only (3 clips); desktop: 2 clips + 3 photos */
+  var onPhone = window.innerWidth <= 900;
+  slides = slides.filter(function (el) { var o = el.getAttribute('data-only'); return !o || o === (onPhone ? 'mobile' : 'desktop'); });
   if (slides.length) {
     var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     var save = navigator.connection && navigator.connection.saveData;
